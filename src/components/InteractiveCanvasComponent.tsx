@@ -517,23 +517,41 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     if (shape.type === 'line' || shape.type === 'connector') return; // 线段已有端点手柄
     hideResizeHandles(shape.id);
     const bounds = getBounds(shape);
+    // 选中虚线框
+    const outline = createSVGElement('rect');
+    const created: SVGElement[] = [];
+    if (outline) {
+      outline.setAttribute('x', String(bounds.x));
+      outline.setAttribute('y', String(bounds.y));
+      outline.setAttribute('width', String(bounds.w));
+      outline.setAttribute('height', String(bounds.h));
+      outline.setAttribute('fill', 'none');
+      outline.setAttribute('stroke', '#38bdf8');
+      outline.setAttribute('stroke-width', '1');
+      outline.setAttribute('stroke-dasharray', '4,4');
+      outline.setAttribute('pointer-events', 'none');
+      outline.setAttribute('data-resize', 'outline');
+      svgRef.current!.appendChild(outline);
+      created.push(outline);
+    }
     const points = [
       { id: 'nw', x: bounds.x, y: bounds.y },
       { id: 'ne', x: bounds.x + bounds.w, y: bounds.y },
       { id: 'sw', x: bounds.x, y: bounds.y + bounds.h },
       { id: 'se', x: bounds.x + bounds.w, y: bounds.y + bounds.h },
     ];
-    const created: SVGElement[] = [];
     points.forEach(p => {
       const handle = createSVGElement('rect');
       if (!handle) return;
-      handle.setAttribute('x', String(p.x - 5));
-      handle.setAttribute('y', String(p.y - 5));
-      handle.setAttribute('width', '10');
-      handle.setAttribute('height', '10');
-      handle.setAttribute('fill', '#ffffff');
-      handle.setAttribute('stroke', '#2563eb');
-      handle.setAttribute('stroke-width', '2');
+      handle.setAttribute('x', String(p.x - 6));
+      handle.setAttribute('y', String(p.y - 6));
+      handle.setAttribute('width', '12');
+      handle.setAttribute('height', '12');
+      handle.setAttribute('rx', '6');
+      handle.setAttribute('ry', '6');
+      handle.setAttribute('fill', '#38bdf8');
+      handle.setAttribute('stroke', '#38bdf8');
+      handle.setAttribute('stroke-width', '1');
       handle.setAttribute('data-resize', p.id);
       handle.setAttribute('cursor', `${p.id}-resize`);
       const onDown = (e: MouseEvent) => {
@@ -556,18 +574,26 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     const handles = resizeHandlesRef.current.get(shape.id);
     if (!handles || handles.length === 0) return;
     const bounds = getBounds(shape);
-    const pos = {
-      nw: { x: bounds.x, y: bounds.y },
-      ne: { x: bounds.x + bounds.w, y: bounds.y },
-      sw: { x: bounds.x, y: bounds.y + bounds.h },
-      se: { x: bounds.x + bounds.w, y: bounds.y + bounds.h },
-    } as const;
     handles.forEach(h => {
-      const id = h.getAttribute('data-resize') as 'nw' | 'ne' | 'sw' | 'se' | null;
-      if (!id) return;
-      const p = pos[id];
-      h.setAttribute('x', String(p.x - 5));
-      h.setAttribute('y', String(p.y - 5));
+      const id = h.getAttribute('data-resize');
+      if (id === 'outline') {
+        h.setAttribute('x', String(bounds.x));
+        h.setAttribute('y', String(bounds.y));
+        h.setAttribute('width', String(bounds.w));
+        h.setAttribute('height', String(bounds.h));
+        return;
+      }
+      const pos = {
+        nw: { x: bounds.x, y: bounds.y },
+        ne: { x: bounds.x + bounds.w, y: bounds.y },
+        sw: { x: bounds.x, y: bounds.y + bounds.h },
+        se: { x: bounds.x + bounds.w, y: bounds.y + bounds.h },
+      } as const;
+      const key = id as 'nw' | 'ne' | 'sw' | 'se' | null;
+      if (!key) return;
+      const p = pos[key];
+      h.setAttribute('x', String(p.x - 6));
+      h.setAttribute('y', String(p.y - 6));
     });
   }, [getBounds]);
 
@@ -596,9 +622,10 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     rect.setAttribute('width', String(bbox.width + padding * 2));
     rect.setAttribute('height', String(bbox.height + padding * 2));
     rect.setAttribute('fill', 'none');
-    rect.setAttribute('stroke', '#dc2626');
-    rect.setAttribute('stroke-width', '1.5');
-    rect.setAttribute('stroke-dasharray', '5,3');
+    const strokeWidth = Math.max(1, shape.data.strokeWidth || 1);
+    rect.setAttribute('stroke', '#60a5fa');
+    rect.setAttribute('stroke-width', String(strokeWidth));
+    rect.setAttribute('stroke-dasharray', '4,4');
     rect.setAttribute('pointer-events', 'none');
     rect.setAttribute('data-text-selection', shape.id);
     svgRef.current.appendChild(rect);
@@ -1029,30 +1056,12 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       case 'text': {
         const currentW = shape.data.width || Number(shape.element.getAttribute('width')) || 100;
         const currentH = shape.data.height || Number(shape.element.getAttribute('height')) || 30;
-        const currentX = shape.data.x || Number(shape.element.getAttribute('x')) || 0;
-        const currentY = shape.data.y || Number(shape.element.getAttribute('y')) || 0;
-        let newX = currentX;
-        let newY = currentY;
         let newW = currentW;
         let newH = currentH;
-
-        if (handle.includes('e')) {
-          newW = Math.max(30, currentW + dx);
-        }
-        if (handle.includes('s')) {
-          newH = Math.max(20, currentH + dy);
-        }
-        if (handle.includes('w')) {
-          newX = currentX + dx;
-          newW = Math.max(30, currentW - dx);
-        }
-        if (handle.includes('n')) {
-          newY = currentY + dy;
-          newH = Math.max(20, currentH - dy);
-        }
-
-        shape.element.setAttribute('x', String(newX));
-        shape.element.setAttribute('y', String(newY));
+        if (handle.includes('e')) newW = Math.max(30, currentW + dx);
+        if (handle.includes('w')) newW = Math.max(30, currentW - dx);
+        if (handle.includes('s')) newH = Math.max(20, currentH + dy);
+        if (handle.includes('n')) newH = Math.max(20, currentH - dy);
         shape.element.setAttribute('width', String(newW));
         shape.element.setAttribute('height', String(newH));
         if (shape.element instanceof SVGForeignObjectElement) {
@@ -1062,8 +1071,6 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
             div.style.height = '100%';
           }
         }
-        shape.data.x = newX;
-        shape.data.y = newY;
         shape.data.width = newW;
         shape.data.height = newH;
         break;
@@ -2263,9 +2270,10 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       
       if (isSelected) {
         if (shape.type !== 'text') {
-          shape.element.setAttribute('stroke', '#dc2626');
-          shape.element.setAttribute('stroke-width', '3');
-          shape.element.setAttribute('stroke-dasharray', '5,5');
+          const originalWidth = shape.data.strokeWidth ?? 1;
+          shape.element.setAttribute('stroke', '#60a5fa');
+          shape.element.setAttribute('stroke-width', String(originalWidth));
+          shape.element.setAttribute('stroke-dasharray', '4,4');
         } else {
           showTextSelection(shape);
           shape.element.setAttribute('stroke', shape.data.stroke);
