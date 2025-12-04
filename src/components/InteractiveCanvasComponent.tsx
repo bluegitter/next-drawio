@@ -205,7 +205,10 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     return document.createElementNS('http://www.w3.org/2000/svg', tagName);
   }, []);
 
-  const getDef = useCallback((shape: SVGShape): ShapeDefinition | undefined => shapeRegistry[shape.type], []);
+  const getDef = useCallback((shapeOrType: SVGShape | string): ShapeDefinition | undefined => {
+    const type = typeof shapeOrType === 'string' ? shapeOrType : shapeOrType.type;
+    return shapeRegistry[type];
+  }, []);
 
   // 获取图形的中心点
   const getShapeCenter = useCallback((shape: SVGShape) => {
@@ -793,319 +796,37 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     }
   }, [saveToHistory, selectedIds, selectedShape, shapes]);
 
-  // 添加矩形
-  const addRectangle = useCallback(() => {
+  // 通用新增图元
+  const addShape = useCallback((type: string) => {
     if (!svgRef.current) return;
+    const def = getDef(type);
+    if (!def?.create) return;
+    try {
+      const created = def.create({ createSVGElement, generateId }) as SVGShape;
+      const newShape: SVGShape = {
+        ...created,
+        type: def.type || type,
+        connections: created.connections ?? [],
+      };
+      svgRef.current.appendChild(newShape.element);
+      setShapes(prev => {
+        const updated = [...prev, newShape];
+        saveToHistory(updated, newShape.id);
+        return updated;
+      });
+      setSelectedShape(newShape.id);
+      onShapeSelect?.(newShape.element);
+    } catch (err) {
+      console.error('Failed to create shape', err);
+    }
+  }, [createSVGElement, generateId, getDef, onShapeSelect, saveToHistory, setSelectedShape]);
 
-    const rect = createSVGElement('rect');
-    if (!rect) return;
-
-    const id = generateId();
-    const x = 100 + Math.random() * 100;
-    const y = 100 + Math.random() * 100;
-    
-    rect.setAttribute('id', id);
-    rect.setAttribute('x', String(x));
-    rect.setAttribute('y', String(y));
-    rect.setAttribute('width', '100');
-    rect.setAttribute('height', '60');
-    rect.setAttribute('fill', '#3b82f6');
-    rect.setAttribute('stroke', '#1e40af');
-    rect.setAttribute('stroke-width', '2');
-    rect.setAttribute('rx', '5');
-    rect.setAttribute('ry', '5');
-    rect.setAttribute('cursor', 'move');
-
-    const newShape: SVGShape = {
-      id,
-      type: 'rect',
-      element: rect,
-      data: {
-        x,
-        y,
-        width: 100,
-        height: 60,
-        fill: '#3b82f6',
-        stroke: '#1e40af',
-        strokeWidth: 2,
-        rotation: 0,
-        scale: 1,
-        opacity: 1,
-      },
-      connections: [null, null],
-    };
-
-    svgRef.current.appendChild(rect);
-    setShapes(prev => {
-      const updated = [...prev, newShape];
-      saveToHistory(updated, id);
-      return updated;
-    });
-    setSelectedShape(id);
-    onShapeSelect?.(rect);
-  }, [createSVGElement, generateId, onShapeSelect, saveToHistory]);
-
-  // 添加圆形
-  const addCircle = useCallback(() => {
-    if (!svgRef.current) return;
-
-    const circle = createSVGElement('circle');
-    if (!circle) return;
-
-    const id = generateId();
-    const cx = 200 + Math.random() * 100;
-    const cy = 150 + Math.random() * 100;
-    
-    circle.setAttribute('id', id);
-    circle.setAttribute('cx', String(cx));
-    circle.setAttribute('cy', String(cy));
-    circle.setAttribute('r', '40');
-    circle.setAttribute('fill', '#10b981');
-    circle.setAttribute('stroke', '#059669');
-    circle.setAttribute('stroke-width', '2');
-    circle.setAttribute('cursor', 'move');
-
-    const newShape: SVGShape = {
-      id,
-      type: 'circle',
-      element: circle,
-      data: {
-        x: cx,
-        y: cy,
-        radius: 40,
-        fill: '#10b981',
-        stroke: '#059669',
-        strokeWidth: 2,
-        rotation: 0,
-        scale: 1,
-        opacity: 1,
-      },
-      connections: [null, null],
-    };
-
-    svgRef.current.appendChild(circle);
-    setShapes(prev => {
-      const updated = [...prev, newShape];
-      saveToHistory(updated, id);
-      return updated;
-    });
-    setSelectedShape(id);
-    onShapeSelect?.(circle);
-  }, [createSVGElement, generateId, onShapeSelect, saveToHistory]);
-
-  // 添加三角形
-  const addTriangle = useCallback(() => {
-    if (!svgRef.current) return;
-
-    const polygon = createSVGElement('polygon');
-    if (!polygon) return;
-
-    const id = generateId();
-    const x = 200 + Math.random() * 100;
-    const y = 100 + Math.random() * 100;
-    const size = 50;
-    const points = `${x},${y} ${x + size},${y + size * 0.866} ${x - size},${y + size * 0.866}`;
-    
-    polygon.setAttribute('id', id);
-    polygon.setAttribute('points', points);
-    polygon.setAttribute('fill', '#f59e0b');
-    polygon.setAttribute('stroke', '#d97706');
-    polygon.setAttribute('stroke-width', '2');
-    polygon.setAttribute('cursor', 'move');
-
-    const newShape: SVGShape = {
-      id,
-      type: 'triangle',
-      element: polygon,
-      data: {
-        x,
-        y,
-        points,
-        fill: '#f59e0b',
-        stroke: '#d97706',
-        strokeWidth: 2,
-        rotation: 0,
-        scale: 1,
-        opacity: 1,
-      },
-      connections: [null, null],
-    };
-
-    svgRef.current.appendChild(polygon);
-    setShapes(prev => {
-      const updated = [...prev, newShape];
-      saveToHistory(updated, id);
-      return updated;
-    });
-    setSelectedShape(id);
-    onShapeSelect?.(polygon);
-  }, [createSVGElement, generateId, onShapeSelect, saveToHistory]);
-
-  // 添加直线
-  const addLine = useCallback(() => {
-    if (!svgRef.current) return;
-
-    const line = createSVGElement('line');
-    if (!line) return;
-
-    const id = generateId();
-    const x1 = 50 + Math.random() * 100;
-    const y1 = 200 + Math.random() * 100;
-    const x2 = x1 + 200;
-    const y2 = y1;
-    
-    line.setAttribute('id', id);
-    line.setAttribute('x1', String(x1));
-    line.setAttribute('y1', String(y1));
-    line.setAttribute('x2', String(x2));
-    line.setAttribute('y2', String(y2));
-    line.setAttribute('stroke', '#ef4444');
-    line.setAttribute('stroke-width', '3');
-    line.setAttribute('stroke-linecap', 'round');
-    line.setAttribute('cursor', 'move');
-
-    const newShape: SVGShape = {
-      id,
-      type: 'line',
-      element: line,
-      data: {
-        x1,
-        y1,
-        x2,
-        y2,
-        fill: 'none',
-        stroke: '#ef4444',
-        strokeWidth: 3,
-        rotation: 0,
-        scale: 1,
-        opacity: 1,
-      },
-      connections: [null, null],
-    };
-
-    svgRef.current.appendChild(line);
-    setShapes(prev => {
-      const updated = [...prev, newShape];
-      saveToHistory(updated, id);
-      return updated;
-    });
-    setSelectedShape(id);
-    onShapeSelect?.(line);
-  }, [createSVGElement, generateId, onShapeSelect, saveToHistory]);
-
-  // 添加折线
-  const addPolyline = useCallback(() => {
-    if (!svgRef.current) return;
-
-    const polyline = createSVGElement('polyline');
-    if (!polyline) return;
-
-    const id = generateId();
-    const points = [
-      [50 + Math.random() * 100, 200 + Math.random() * 100],
-      [150 + Math.random() * 100, 180 + Math.random() * 100],
-      [250 + Math.random() * 100, 220 + Math.random() * 100],
-      [350 + Math.random() * 100, 200 + Math.random() * 100],
-    ].map(([x, y]) => `${x},${y}`).join(' ');
-    
-    polyline.setAttribute('id', id);
-    polyline.setAttribute('points', points);
-    polyline.setAttribute('fill', 'none');
-    polyline.setAttribute('stroke', '#8b5cf6');
-    polyline.setAttribute('stroke-width', '3');
-    polyline.setAttribute('stroke-linecap', 'round');
-    polyline.setAttribute('stroke-linejoin', 'round');
-    polyline.setAttribute('cursor', 'move');
-
-    const newShape: SVGShape = {
-      id,
-      type: 'polyline',
-      element: polyline,
-      data: {
-        points,
-        fill: 'none',
-        stroke: '#8b5cf6',
-        strokeWidth: 3,
-        rotation: 0,
-        scale: 1,
-        opacity: 1,
-      },
-      connections: [null, null],
-    };
-
-    svgRef.current.appendChild(polyline);
-    setShapes(prev => {
-      const updated = [...prev, newShape];
-      saveToHistory(updated, id);
-      return updated;
-    });
-    setSelectedShape(id);
-    onShapeSelect?.(polyline);
-  }, [createSVGElement, generateId, onShapeSelect, saveToHistory]);
-
-  // 添加文字
-  const addText = useCallback(() => {
-    if (!svgRef.current) return;
-
-    const foreign = createSVGElement('foreignObject');
-    if (!foreign) return;
-
-    const id = generateId();
-    const x = 100 + Math.random() * 100;
-    const y = 250 + Math.random() * 50;
-    const width = 200;
-    const height = 60;
-    
-    foreign.setAttribute('id', id);
-    foreign.setAttribute('x', String(x));
-    foreign.setAttribute('y', String(y));
-    foreign.setAttribute('width', String(width));
-    foreign.setAttribute('height', String(height));
-    foreign.setAttribute('cursor', 'move');
-
-    const div = document.createElement('div');
-    div.textContent = '点击编辑文字';
-    div.style.width = '100%';
-    div.style.height = '100%';
-    div.style.whiteSpace = 'pre-wrap';
-    div.style.wordBreak = 'break-word';
-    div.style.fontSize = '20px';
-    div.style.fontFamily = 'Arial, sans-serif';
-    div.style.fontWeight = '400';
-    div.style.color = '#1f2937';
-    div.style.lineHeight = '1.2';
-
-    foreign.appendChild(div);
-
-    const newShape: SVGShape = {
-      id,
-      type: 'text',
-      element: foreign,
-      data: {
-        x,
-        y,
-        width,
-        height,
-        text: div.textContent || '点击编辑文字',
-        fill: '#1f2937',
-        stroke: 'none',
-        strokeWidth: 0,
-        rotation: 0,
-        scale: 1,
-        opacity: 1,
-      },
-      connections: [],
-    };
-
-    svgRef.current.appendChild(foreign);
-    setShapes(prev => {
-      const updated = [...prev, newShape];
-      saveToHistory(updated, id);
-      return updated;
-    });
-    setSelectedShape(id);
-    onShapeSelect?.(foreign);
-  }, [createSVGElement, generateId, onShapeSelect, saveToHistory]);
+  const addRectangle = useCallback(() => addShape('rect'), [addShape]);
+  const addCircle = useCallback(() => addShape('circle'), [addShape]);
+  const addTriangle = useCallback(() => addShape('triangle'), [addShape]);
+  const addLine = useCallback(() => addShape('line'), [addShape]);
+  const addPolyline = useCallback(() => addShape('polyline'), [addShape]);
+  const addText = useCallback(() => addShape('text'), [addShape]);
 
   // 连接图形
   const connectShapes = useCallback((fromShape: string, toShape: string, fromPortId?: string, toPortId?: string) => {
@@ -1655,6 +1376,19 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     return selectedShape ? document.getElementById(selectedShape) : null;
   }, [selectedShape]);
 
+  const cloneShapeWithDef = useCallback((shape: SVGShape, offset: number) => {
+    const def = getDef(shape);
+    if (def?.clone) {
+      const cloned = def.clone(shape, { createSVGElement, generateId }, offset) as SVGShape;
+      cloned.connections = cloned.connections ?? [];
+      return cloned;
+    }
+    const clonedElement = shape.element.cloneNode(true) as SVGElement;
+    const id = generateId();
+    clonedElement.setAttribute('id', id);
+    return { ...shape, id, element: clonedElement, connections: [] as Array<string | null> };
+  }, [createSVGElement, generateId, getDef]);
+
   const duplicateSelected = useCallback((ids?: Set<string> | string[]) => {
     const targetIds = ids ? (ids instanceof Set ? ids : new Set(ids)) : selectedIds;
     if (targetIds.size === 0 || !svgRef.current) return;
@@ -1662,91 +1396,48 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     const offset = 20;
     const idMap = new Map<string, string>();
     const newShapes: SVGShape[] = [];
+    const ctxShapes = [...shapes];
 
-    // 先复制非连接线的图形
+    // 先复制非连接类图元（包含未连接的线）
     shapes.forEach(sourceShape => {
       if (!targetIds.has(sourceShape.id)) return;
-      if (sourceShape.type === 'line' || sourceShape.type === 'connector') return;
+      const isConnectionLine = (sourceShape.type === 'line' || sourceShape.type === 'connector') && (sourceShape.connections?.some(Boolean));
+      if (sourceShape.type === 'connector' || isConnectionLine) return;
 
-      const newId = generateId();
-      idMap.set(sourceShape.id, newId);
-      const clonedElement = sourceShape.element.cloneNode(true) as SVGElement;
-      clonedElement.setAttribute('id', newId);
-      const newData = { ...sourceShape.data };
-
-      switch (sourceShape.type) {
-        case 'rect':
-          newData.x = (sourceShape.data.x || 0) + offset;
-          newData.y = (sourceShape.data.y || 0) + offset;
-          clonedElement.setAttribute('x', String(newData.x));
-          clonedElement.setAttribute('y', String(newData.y));
-          break;
-        case 'circle':
-          newData.x = (sourceShape.data.x || 0) + offset;
-          newData.y = (sourceShape.data.y || 0) + offset;
-          clonedElement.setAttribute('cx', String(newData.x));
-          clonedElement.setAttribute('cy', String(newData.y));
-          break;
-        case 'triangle': {
-          const srcPoints = sourceShape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-          const shiftedPoints = srcPoints.map(([x, y]) => `${x + offset},${y + offset}`).join(' ');
-          newData.points = shiftedPoints;
-          clonedElement.setAttribute('points', shiftedPoints);
-          break;
-        }
-        case 'text': {
-          const newX = (sourceShape.data.x || 0) + offset;
-          const newY = (sourceShape.data.y || 0) + offset;
-          newData.x = newX;
-          newData.y = newY;
-          newData.width = sourceShape.data.width;
-          newData.height = sourceShape.data.height;
-          clonedElement.setAttribute('x', String(newX));
-          clonedElement.setAttribute('y', String(newY));
-          if (sourceShape.element instanceof SVGForeignObjectElement) {
-            clonedElement.setAttribute('width', String(sourceShape.data.width || sourceShape.element.getAttribute('width') || 200));
-            clonedElement.setAttribute('height', String(sourceShape.data.height || sourceShape.element.getAttribute('height') || 60));
-          }
-          break;
-        }
-        case 'polyline': {
-          const polyPoints = sourceShape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-          const newPolyPoints = polyPoints.map(([x, y]) => `${x + offset},${y + offset}`).join(' ');
-          newData.points = newPolyPoints;
-          clonedElement.setAttribute('points', newPolyPoints);
-          break;
-        }
-      }
-
-      const duplicatedShape: SVGShape = {
-        ...sourceShape,
-        id: newId,
-        element: clonedElement,
-        data: newData,
-        connections: [],
-      };
+      const duplicatedShape = cloneShapeWithDef(sourceShape, offset);
+      idMap.set(sourceShape.id, duplicatedShape.id);
       applyTransform(duplicatedShape);
-      svgRef.current.appendChild(clonedElement);
+      svgRef.current!.appendChild(duplicatedShape.element);
       newShapes.push(duplicatedShape);
     });
 
-    // 再复制连接线（仅当两端都在选中集合）
+    // 再复制连接线（两端都在选中集合才复制）
     shapes.forEach(sourceShape => {
       if (!targetIds.has(sourceShape.id)) return;
       if (sourceShape.type !== 'line' && sourceShape.type !== 'connector') return;
+
       const [from, to] = (sourceShape.connections || []) as Array<string | null | undefined>;
-      if (!from || !to) return;
+      if (!from || !to) {
+        // 未连接的线直接克隆
+        const duplicatedShape = cloneShapeWithDef(sourceShape, offset);
+        idMap.set(sourceShape.id, duplicatedShape.id);
+        applyTransform(duplicatedShape);
+        svgRef.current!.appendChild(duplicatedShape.element);
+        newShapes.push(duplicatedShape);
+        return;
+      }
+
       const newFrom = idMap.get(from);
       const newTo = idMap.get(to);
       if (!newFrom || !newTo) return;
 
-      const fromShape = [...newShapes, ...shapes].find(s => s.id === newFrom);
-      const toShape = [...newShapes, ...shapes].find(s => s.id === newTo);
+      const fromShape = [...newShapes, ...ctxShapes].find(s => s.id === newFrom);
+      const toShape = [...newShapes, ...ctxShapes].find(s => s.id === newTo);
       if (!fromShape || !toShape) return;
 
-      const newId = generateId();
       const connector = createSVGElement('line');
       if (!connector) return;
+      const newId = generateId();
       connector.setAttribute('id', newId);
       connector.setAttribute('stroke', sourceShape.data.stroke);
       connector.setAttribute('stroke-width', String(sourceShape.data.strokeWidth || 2));
@@ -1787,7 +1478,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     onShapeSelect?.(mergedShapes.find(s => s.id === newIds[0])?.element || null);
     saveToHistory(mergedShapes, newIds);
     return newIds;
-  }, [applyTransform, createSVGElement, generateId, getPortPositionById, getShapeCenter, onShapeSelect, saveToHistory, selectedIds, shapes]);
+  }, [applyTransform, cloneShapeWithDef, createSVGElement, generateId, getPortPositionById, getShapeCenter, onShapeSelect, saveToHistory, selectedIds, shapes]);
 
   const bringToFront = useCallback(() => {
     if (!selectedShape || !svgRef.current) return;
@@ -1936,35 +1627,11 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
     shapes.forEach(shape => {
       hasContent = true;
-      const bounds = shape.element.getBoundingClientRect();
-      const svgBounds = svgRef.current!.getBoundingClientRect();
-      
-      const relativeLeft = bounds.left - svgBounds.left;
-      const relativeTop = bounds.top - svgBounds.top;
-      const relativeRight = bounds.right - svgBounds.left;
-      const relativeBottom = bounds.bottom - svgBounds.top;
-
-      switch (shape.type) {
-        case 'rect':
-          minX = Math.min(minX, shape.data.x || 0);
-          minY = Math.min(minY, shape.data.y || 0);
-          maxX = Math.max(maxX, (shape.data.x || 0) + (shape.data.width || 0));
-          maxY = Math.max(maxY, (shape.data.y || 0) + (shape.data.height || 0));
-          break;
-        case 'circle':
-          const radius = shape.data.radius || 0;
-          minX = Math.min(minX, (shape.data.x || 0) - radius);
-          minY = Math.min(minY, (shape.data.y || 0) - radius);
-          maxX = Math.max(maxX, (shape.data.x || 0) + radius);
-          maxY = Math.max(maxY, (shape.data.y || 0) + radius);
-          break;
-        case 'text':
-          minX = Math.min(minX, shape.data.x || 0);
-          minY = Math.min(minY, (shape.data.y || 0) - 20);
-          maxX = Math.max(maxX, (shape.data.x || 0) + 100);
-          maxY = Math.max(maxY, (shape.data.y || 0) + 20);
-          break;
-      }
+      const bounds = getShapeBounds(shape);
+      minX = Math.min(minX, bounds.minX);
+      minY = Math.min(minY, bounds.minY);
+      maxX = Math.max(maxX, bounds.maxX);
+      maxY = Math.max(maxY, bounds.maxY);
     });
 
     // 如果有内容且超出边界，通知父组件
@@ -1976,7 +1643,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       // 这里可以触发回调来通知父组件调整画布大小
       console.log('Canvas needs resizing to:', { newWidth, newHeight });
     }
-  }, [shapes, width, height, autoResize]);
+  }, [autoResize, getShapeBounds, height, shapes, width]);
 
   // 更新选中状态样式
   useEffect(() => {
