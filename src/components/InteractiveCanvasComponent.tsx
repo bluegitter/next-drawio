@@ -1923,28 +1923,26 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
   // 删除选中图形及关联连接线
   const deleteSelected = useCallback(() => {
-    if (!selectedShape || !svgRef.current) return;
+    if (selectedIds.size === 0 || !svgRef.current) return;
 
     let updatedShapes = [...shapes];
-    const targetShape = updatedShapes.find(shape => shape.id === selectedShape);
-    if (!targetShape) return;
-
     const connectorIds = new Set<string>();
 
-    // 选中的是连接线
-    if (targetShape.type === 'connector') {
-      connectorIds.add(targetShape.id);
-    } else {
-      // 移除与该图形相关的所有连接线
-      updatedShapes.forEach(shape => {
-        if (shape.type === 'connector' && shape.connections?.includes(selectedShape)) {
+    updatedShapes.forEach(shape => {
+      // 已选中的连接线
+      if (selectedIds.has(shape.id) && shape.type === 'connector') {
+        connectorIds.add(shape.id);
+      }
+      // 连接到已选中图元的连接线
+      if (shape.type === 'connector' && shape.connections) {
+        const [a, b] = shape.connections;
+        if ((a && selectedIds.has(a)) || (b && selectedIds.has(b))) {
           connectorIds.add(shape.id);
         }
-      });
-      targetShape.connections?.forEach(id => connectorIds.add(id));
-    }
+      }
+    });
 
-    const idsToRemove = new Set<string>([selectedShape, ...Array.from(connectorIds)]);
+    const idsToRemove = new Set<string>([...Array.from(selectedIds), ...Array.from(connectorIds)]);
 
     updatedShapes = updatedShapes
       .filter(shape => !idsToRemove.has(shape.id))
@@ -1964,11 +1962,11 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     });
 
     setShapes(updatedShapes);
-    setSelectedShape(null);
+    setSelectedIds(new Set());
     setHoveredShapeId(null);
     onShapeSelect?.(null);
-    saveToHistory(updatedShapes, null);
-  }, [hideConnectorHandles, hidePorts, onShapeSelect, saveToHistory, selectedShape, shapes]);
+    saveToHistory(updatedShapes, []);
+  }, [hideConnectorHandles, hidePorts, hideResizeHandles, onShapeSelect, saveToHistory, selectedIds, shapes]);
 
   const clearCanvas = useCallback(() => {
     if (!svgRef.current) return;
