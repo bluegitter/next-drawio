@@ -302,6 +302,14 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     const projY = y1 + t * dy;
     return Math.hypot(px - projX, py - projY);
   }, []);
+  
+  // 直线是否已连接到其他图元
+  const isLineConnected = useCallback((shape: SVGShape) => {
+    if (shape.type !== 'line' && shape.type !== 'connector') return true;
+    if (!shape.connections || shape.connections.length === 0) return false;
+    const [from, to] = shape.connections as Array<string | null | undefined>;
+    return Boolean(from) || Boolean(to);
+  }, []);
 
   const getShapeBounds = useCallback((shape: SVGShape) => {
     switch (shape.type) {
@@ -1448,7 +1456,12 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
           }
         });
         setShapes(nextShapes);
-        setShapeStartPos({ x: shapeStartPos.x + dx, y: shapeStartPos.y + dy });
+        // 对线段整体拖动使用起始端点记位，其余保持原逻辑
+        if (shape.type === 'line' || shape.type === 'connector') {
+          setShapeStartPos({ x: (shape.data.x1 || 0) + dx, y: (shape.data.y1 || 0) + dy });
+        } else {
+          setShapeStartPos({ x: shapeStartPos.x + dx, y: shapeStartPos.y + dy });
+        }
       }
       
       setDragStart({ x, y });
@@ -1715,8 +1728,12 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       // 普通选择
       setSelectedShape(shape.id);
       onShapeSelect?.(shape.element);
-      // 连接线/直线点击仅选中，不进入拖动状态
-      if (shape.type !== 'line' && shape.type !== 'connector') {
+      // 连接线/直线：无连接时可整体拖动；有连接时仅选中
+      if ((shape.type === 'line' || shape.type === 'connector') && !isLineConnected(shape)) {
+        setIsDragging(true);
+        setDragStart({ x, y });
+        setShapeStartPos({ x: shape.data.x1 || 0, y: shape.data.y1 || 0 });
+      } else if (shape.type !== 'line' && shape.type !== 'connector') {
         // 记录拖拽起始位置
         setIsDragging(true);
         setDragStart({ x, y });
@@ -1725,7 +1742,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         setIsDragging(false);
       }
     }
-  }, [connectShapes, connectionStart, connectionStartPort, isConnecting, onShapeSelect, selectedShape, startConnection]);
+  }, [connectShapes, connectionStart, connectionStartPort, isConnecting, isLineConnected, onShapeSelect, selectedShape, startConnection]);
 
   // 删除选中图形及关联连接线
   const deleteSelected = useCallback(() => {
