@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { EnhancedToolbar, ToolType } from '@/components/EnhancedToolbar';
 import InteractiveCanvasComponent, { CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
 import PropertyPanel from '@/components/PropertyPanel';
+import { sidebarIcons } from '@/constants/iconList';
 import './globals.css';
 
 export default function Home() {
@@ -44,6 +45,9 @@ export default function Home() {
       switch (tool) {
         case 'rectangle':
           canvasMethodsRef.current.addRectangle();
+          break;
+        case 'roundedRect':
+          canvasMethodsRef.current.addRoundedRect();
           break;
         case 'circle':
           canvasMethodsRef.current.addCircle();
@@ -191,20 +195,36 @@ export default function Home() {
 
       {/* 主工作区 */}
       <div className="flex flex-1">
-        {/* 左侧工具面板 */}
-        <div className="w-16 bg-white border-r border-gray-200 p-2 space-y-2">
-          <Button size="sm" variant="ghost" title="选择工具" onClick={() => handleToolChange('select')}>↖</Button>
-          <Button size="sm" variant="ghost" title="矩形工具" onClick={() => handleToolChange('rectangle')}>▢</Button>
-          <Button size="sm" variant="ghost" title="圆形工具" onClick={() => handleToolChange('circle')}>○</Button>
-          <Button size="sm" variant="ghost" title="三角形工具" onClick={() => handleToolChange('triangle')}>△</Button>
-          <Button size="sm" variant="ghost" title="直线工具" onClick={() => handleToolChange('line')}>╱</Button>
-          <Button size="sm" variant="ghost" title="折线工具" onClick={() => handleToolChange('polyline')}>⎍</Button>
-          <Button size="sm" variant="ghost" title="文字工具" onClick={() => handleToolChange('text')}>T</Button>
-          <Button size="sm" variant="ghost" title="连接工具" onClick={() => handleToolChange('connect')}>🔗</Button>
-          <div className="w-px h-px bg-gray-300 my-2"></div>
-          <Button size="sm" variant="ghost" title="钢笔工具">✏</Button>
-          <Button size="sm" variant="ghost" title="手形工具">✋</Button>
-          <Button size="sm" variant="ghost" title="缩放工具">🔍</Button>
+        {/* 左侧工具 + 图标面板 */}
+        <div className="w-64 bg-white border-r border-gray-200 p-3 space-y-3">
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <Button size="sm" variant="ghost" title="选择工具" onClick={() => handleToolChange('select')}>↖</Button>
+            <Button size="sm" variant="ghost" title="矩形工具" onClick={() => handleToolChange('rectangle')}>▢</Button>
+            <Button size="sm" variant="ghost" title="圆角矩形工具" onClick={() => handleToolChange('roundedRect')}>▭</Button>
+            <Button size="sm" variant="ghost" title="圆形工具" onClick={() => handleToolChange('circle')}>○</Button>
+            <Button size="sm" variant="ghost" title="三角形工具" onClick={() => handleToolChange('triangle')}>△</Button>
+            <Button size="sm" variant="ghost" title="直线工具" onClick={() => handleToolChange('line')}>╱</Button>
+            <Button size="sm" variant="ghost" title="折线工具" onClick={() => handleToolChange('polyline')}>⎍</Button>
+            <Button size="sm" variant="ghost" title="文字工具" onClick={() => handleToolChange('text')}>T</Button>
+            <Button size="sm" variant="ghost" title="连接工具" onClick={() => handleToolChange('connect')}>🔗</Button>
+          </div>
+          <div className="h-px bg-gray-200" />
+          <div>
+            <div className="text-sm font-semibold text-gray-700 mb-2">网络图标</div>
+            <div className="grid grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
+              {sidebarIcons.map(icon => (
+                <button
+                  key={icon.name}
+                  className="flex flex-col items-center gap-1 border border-gray-200 rounded p-2 hover:border-blue-400 hover:shadow-sm transition"
+                  onClick={() => canvasMethodsRef.current?.addSvgIcon(icon.src, { width: 80, height: 60 })}
+                  title={icon.name}
+                >
+                  <img src={icon.src} alt={icon.name} className="w-12 h-12 object-contain" />
+                  <span className="text-xs text-gray-600 truncate w-full">{icon.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* 画布区域 */}
@@ -306,6 +326,7 @@ export default function Home() {
           <span>画布: {canvasWidth} × {canvasHeight}px</span>
           <span>当前工具: {currentTool === 'select' ? '选择' : 
                       currentTool === 'rectangle' ? '矩形' :
+                      currentTool === 'roundedRect' ? '圆角矩形' :
                       currentTool === 'circle' ? '圆形' :
                       currentTool === 'triangle' ? '三角形' :
                       currentTool === 'line' ? '直线' :

@@ -6,11 +6,13 @@ import type { ShapeDefinition } from '../shapes/types';
 
 export interface CanvasComponentRef {
   addRectangle: () => void;
+  addRoundedRect: () => void;
   addCircle: () => void;
   addTriangle: () => void;
   addLine: () => void;
   addPolyline: () => void;
   addText: () => void;
+  addSvgIcon: (href: string, options?: { width?: number; height?: number }) => void;
   deleteSelected: () => void;
   clearCanvas: () => void;
   exportCanvas: (format: 'png' | 'jpg' | 'svg') => void;
@@ -46,7 +48,7 @@ export interface CanvasComponentProps {
 
 interface SVGShape {
   id: string;
-  type: 'rect' | 'circle' | 'triangle' | 'line' | 'polyline' | 'text' | 'connector';
+  type: 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'line' | 'polyline' | 'text' | 'connector' | 'image';
   element: SVGElement;
   data: {
     x?: number;
@@ -54,6 +56,7 @@ interface SVGShape {
     width?: number;
     height?: number;
     radius?: number;
+    cornerRadius?: number; // 圆角矩形的圆角半径
     points?: string;
     x1?: number;
     y1?: number;
@@ -153,8 +156,14 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const handleConnectionRef = useRef(false);
   const lastPointerRef = useRef<{ x: number; y: number; clientX: number; clientY: number }>({ x: 0, y: 0, clientX: 0, clientY: 0 });
   const resizeHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
+  const cornerHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
   const textSelectionRef = useRef<Map<string, SVGRectElement>>(new Map());
   const copyBufferRef = useRef<string[]>([]);
+  const [draggingCornerHandle, setDraggingCornerHandle] = useState<{
+    shapeId: string;
+    handleType: string;
+    startCornerRadius: number;
+  } | null>(null);
   const selectedShape = useMemo(() => {
     const first = selectedIds.values().next();
     return first.done ? null : first.value;
@@ -356,6 +365,17 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     resizeHandlesRef.current.clear();
   }, []);
 
+  const hideCornerHandles = useCallback((shapeId?: string) => {
+    if (shapeId) {
+      const handles = cornerHandlesRef.current.get(shapeId);
+      handles?.forEach(h => h.remove());
+      cornerHandlesRef.current.delete(shapeId);
+      return;
+    }
+    cornerHandlesRef.current.forEach(list => list.forEach(h => h.remove()));
+    cornerHandlesRef.current.clear();
+  }, []);
+
   const showResizeHandles = useCallback((shape: SVGShape) => {
     if (!svgRef.current) return;
     if (shape.type === 'line' || shape.type === 'connector') return; // 线段已有端点手柄
@@ -413,6 +433,53 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     });
     resizeHandlesRef.current.set(shape.id, created);
   }, [createSVGElement, getBounds, hideResizeHandles, onShapeSelect]);
+
+  const showCornerHandles = useCallback((shape: SVGShape) => {
+    if (!svgRef.current || shape.type !== 'roundedRect') return;
+    
+    hideCornerHandles(shape.id);
+    const def = getDef(shape);
+    if (!def?.getCornerHandles) return;
+    
+    const cornerHandles = def.getCornerHandles(shape);
+    const created: SVGElement[] = [];
+
+    cornerHandles.forEach(corner => {
+      const handle = createSVGElement('circle');
+      if (!handle) return;
+      
+      handle.setAttribute('cx', String(corner.x));
+      handle.setAttribute('cy', String(corner.y));
+      handle.setAttribute('r', '6');
+      handle.setAttribute('fill', '#f59e0b'); // 橙色用于区分圆角手柄
+      handle.setAttribute('stroke', '#d97706');
+      handle.setAttribute('stroke-width', '2');
+      handle.setAttribute('data-corner-handle', corner.type);
+      handle.setAttribute('data-shape-id', shape.id);
+      handle.setAttribute('cursor', corner.cursor);
+      handle.style.opacity = '0.8';
+
+      const onCornerMouseDown = (e: MouseEvent) => {
+        e.stopPropagation();
+        console.log('圆角手柄被点击:', corner.type, '当前圆角:', shape.data.cornerRadius);
+        setDraggingCornerHandle({
+          shapeId: shape.id,
+          handleType: corner.type,
+          startCornerRadius: shape.data.cornerRadius || 0
+        });
+        setIsResizing(true);
+        // 不要设置 resizeHandle，因为圆角调整有自己独立的逻辑
+        const rect = svgRef.current!.getBoundingClientRect();
+        setDragStart({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      };
+
+      handle.addEventListener('mousedown', onCornerMouseDown);
+      svgRef.current!.appendChild(handle);
+      created.push(handle);
+    });
+
+    cornerHandlesRef.current.set(shape.id, created);
+  }, [createSVGElement, getDef, hideCornerHandles]);
 
   const refreshResizeHandles = useCallback((shape: SVGShape) => {
     const handles = resizeHandlesRef.current.get(shape.id);
@@ -802,12 +869,12 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   }, [saveToHistory, selectedIds, selectedShape, shapes]);
 
   // 通用新增图元
-  const addShape = useCallback((type: string) => {
+  const addShape = useCallback((type: string, options?: any) => {
     if (!svgRef.current) return;
     const def = getDef(type);
     if (!def?.create) return;
     try {
-      const created = def.create({ createSVGElement, generateId }) as SVGShape;
+      const created = def.create({ createSVGElement, generateId }, options) as SVGShape;
       const newShape: SVGShape = {
         ...created,
         type: (def.type as SVGShape['type']) || (type as SVGShape['type']),
@@ -827,11 +894,15 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   }, [createSVGElement, generateId, getDef, onShapeSelect, saveToHistory, setSelectedShape]);
 
   const addRectangle = useCallback(() => addShape('rect'), [addShape]);
+  const addRoundedRect = useCallback(() => addShape('roundedRect'), [addShape]);
   const addCircle = useCallback(() => addShape('circle'), [addShape]);
   const addTriangle = useCallback(() => addShape('triangle'), [addShape]);
   const addLine = useCallback(() => addShape('line'), [addShape]);
   const addPolyline = useCallback(() => addShape('polyline'), [addShape]);
   const addText = useCallback(() => addShape('text'), [addShape]);
+  const addSvgIcon = useCallback((href: string, options?: { width?: number; height?: number }) => {
+    addShape('image', { href, width: options?.width, height: options?.height });
+  }, [addShape]);
 
   // 连接图形
   const connectShapes = useCallback((fromShape: string, toShape: string, fromPortId?: string, toPortId?: string) => {
@@ -1032,23 +1103,99 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       }
       
       setDragStart({ x, y });
-    } else if (isResizing && selectedShape && resizeHandle) {
-      // 调整大小
+    } else if (isResizing) {
+      // 调整大小或圆角
       const dx = x - dragStart.x;
       const dy = y - dragStart.y;
       
-      const shape = shapes.find(s => s.id === selectedShape);
-      if (shape) {
-        updateShapeSize(shape, resizeHandle, dx, dy);
-        refreshResizeHandles(shape);
-        const nextShapes = shapes.map(s => s.id === shape.id ? { ...shape, data: { ...shape.data }, connections: shape.connections ? [...shape.connections] : undefined, element: shape.element } : s);
-        shape.connections?.forEach(connId => {
-          const connLine = nextShapes.find(s => s.id === connId);
-          if (connLine && (connLine.type === 'line' || connLine.type === 'polyline' || connLine.type === 'connector')) {
-            updateConnectionLine(connLine, shape.id, nextShapes);
+      if (draggingCornerHandle) {
+        console.log('处理圆角调整:', draggingCornerHandle, 'dx:', dx, 'dy:', dy);
+        // 专门处理圆角调整
+        const shape = shapes.find(s => s.id === draggingCornerHandle.shapeId);
+        if (shape && shape.type === 'roundedRect') {
+          console.log('找到圆角矩形，当前圆角:', shape.data.cornerRadius);
+          const adjustment = Math.abs(dx) + Math.abs(dy);
+          const maxRadius = Math.min((shape.data.width || 0), (shape.data.height || 0)) / 4;
+          
+          // 使用当前shape的圆角而不是开始时的圆角，避免被重置
+          const currentCornerRadius = shape.data.cornerRadius || 0;
+          
+          // 增大调整幅度 - 使用更大的系数
+          let newCornerRadius;
+          if (dx > 0) {
+            // 向右拖拽 - 增加圆角
+            newCornerRadius = Math.min(maxRadius, currentCornerRadius + adjustment * 0.3);
+          } else if (dx < 0) {
+            // 向左拖拽 - 减少圆角
+            newCornerRadius = Math.max(0, currentCornerRadius - adjustment * 0.3);
+          } else {
+            // 纯垂直拖拽，不做改变
+            newCornerRadius = currentCornerRadius;
           }
-        });
-        setShapes(nextShapes);
+          
+          console.log('新的圆角半径:', newCornerRadius, '从:', currentCornerRadius, 'max:', maxRadius);
+          
+          // 直接更新SVG元素和内存中的数据
+          const currentRx = shape.element.getAttribute('rx');
+          
+          shape.element.setAttribute('rx', String(newCornerRadius));
+          shape.element.setAttribute('ry', String(newCornerRadius));
+          
+          // 强制触发SVG重绘 - 通过临时修改transform属性
+          const currentTransform = shape.element.getAttribute('transform') || '';
+          shape.element.setAttribute('transform', currentTransform + ' translate(0.001,0.001)');
+          setTimeout(() => {
+            shape.element.setAttribute('transform', currentTransform);
+          }, 0);
+          
+          console.log('SVG属性更新前:', currentRx, '更新后:', shape.element.getAttribute('rx'));
+          
+          // 更新内存数据
+          const updatedShape = {
+            ...shape,
+            data: {
+              ...shape.data,
+              cornerRadius: newCornerRadius
+            }
+          };
+          
+          const nextShapes = shapes.map(s => s.id === shape.id ? updatedShape : s);
+          setShapes(nextShapes);
+          
+          // 更新拖拽状态，使用当前的圆角值
+          setDraggingCornerHandle({
+            ...draggingCornerHandle,
+            startCornerRadius: newCornerRadius
+          });
+          
+          // 延迟更新圆角手柄，避免覆盖SVG属性
+          setTimeout(() => {
+            showCornerHandles(updatedShape);
+          }, 0);
+        }
+      } else if (selectedShape && resizeHandle) {
+        // 普通的大小调整
+        const shape = shapes.find(s => s.id === selectedShape);
+        if (shape) {
+          updateShapeSize(shape, resizeHandle, dx, dy);
+          refreshResizeHandles(shape);
+          
+          // 如果是圆角矩形，也更新圆角手柄
+          if (shape.type === 'roundedRect') {
+            showCornerHandles(shape);
+          }
+        }
+        
+        if (shape) {
+          const nextShapes = shapes.map(s => s.id === shape.id ? { ...shape, data: { ...shape.data }, connections: shape.connections ? [...shape.connections] : undefined, element: shape.element } : s);
+          shape.connections?.forEach(connId => {
+            const connLine = nextShapes.find(s => s.id === connId);
+            if (connLine && (connLine.type === 'line' || connLine.type === 'polyline' || connLine.type === 'connector')) {
+              updateConnectionLine(connLine, shape.id, nextShapes);
+            }
+          });
+          setShapes(nextShapes);
+        }
       }
       
       setDragStart({ x, y });
@@ -1268,6 +1415,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
+    setDraggingCornerHandle(null);
     setDragStart({ x: 0, y: 0 });
   }, [connectShapes, connectionStart, connectionStartPort, getShapeBounds, isConnecting, isDragging, isResizing, isSelectingBox, onShapeSelect, saveToHistory, selectionRect, setSelectedShape, setSelectedShapes, shapes, tempLine]);
 
@@ -1347,6 +1495,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       hidePorts(id);
       hideConnectorHandles(id);
       hideResizeHandles(id);
+      hideCornerHandles(id);
       const element = document.getElementById(id);
       if (element && svgRef.current?.contains(element)) {
         svgRef.current.removeChild(element);
@@ -1358,7 +1507,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     setHoveredShapeId(null);
     onShapeSelect?.(null);
     saveToHistory(updatedShapes, []);
-  }, [hideConnectorHandles, hidePorts, hideResizeHandles, onShapeSelect, saveToHistory, selectedIds, shapes]);
+  }, [hideConnectorHandles, hidePorts, hideResizeHandles, hideCornerHandles, onShapeSelect, saveToHistory, selectedIds, shapes]);
 
   const clearCanvas = useCallback(() => {
     if (!svgRef.current) return;
@@ -1366,6 +1515,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     hidePorts();
     hideConnectorHandles();
     hideResizeHandles();
+    hideCornerHandles();
     hideTextSelection();
     while (svgRef.current.firstChild) {
       svgRef.current.removeChild(svgRef.current.firstChild);
@@ -1375,7 +1525,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     setHoveredShapeId(null);
     onShapeSelect?.(null);
     saveToHistory([], null);
-  }, [hideConnectorHandles, hidePorts, onShapeSelect, saveToHistory]);
+  }, [hideConnectorHandles, hidePorts, hideResizeHandles, hideCornerHandles, onShapeSelect, saveToHistory]);
 
   const getSelectedShape = useCallback((): SVGElement | null => {
     const el = selectedShape ? document.getElementById(selectedShape) : null;
@@ -1699,8 +1849,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           // 非选中状态不再显示缩放手柄
           if (isSelected) {
             showResizeHandles(shape);
+            // 如果是圆角矩形，显示圆角手柄
+            if (shape.type === 'roundedRect') {
+              showCornerHandles(shape);
+            }
           } else {
             hideResizeHandles(shape.id);
+            hideCornerHandles(shape.id);
           }
         }
       };
@@ -1717,6 +1872,10 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           const movingToPort = related?.getAttribute?.('data-port-id');
           if (!isConnecting && !movingToPort) {
             hidePorts(shape.id);
+          }
+          // 隐藏圆角手柄
+          if (!isSelected) {
+            hideCornerHandles(shape.id);
           }
         }
       };
@@ -1743,8 +1902,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       if (shape.type !== 'line' && shape.type !== 'connector') {
         if (isSelected) {
           showResizeHandles(shape);
+          // 如果是圆角矩形，显示圆角手柄
+          if (shape.type === 'roundedRect') {
+            showCornerHandles(shape);
+          }
         } else {
           hideResizeHandles(shape.id);
+          hideCornerHandles(shape.id);
         }
       }
     });
@@ -1752,7 +1916,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     return () => {
       cleanups.forEach(clean => clean());
     };
-  }, [draggingHandle, handleShapeMouseDown, hideConnectorHandles, hidePorts, hideResizeHandles, isConnecting, selectedIds, shapes, showConnectorHandles, showPorts, showResizeHandles, showTextSelection, hideTextSelection, beginEditText, updateTextContent]);
+  }, [draggingCornerHandle, draggingHandle, handleShapeMouseDown, hideConnectorHandles, hidePorts, hideResizeHandles, hideCornerHandles, isConnecting, selectedIds, shapes, showConnectorHandles, showPorts, showResizeHandles, showCornerHandles, showTextSelection, hideTextSelection, beginEditText, updateTextContent]);
 
   // 画布点击事件（取消选择）
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
@@ -1868,11 +2032,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   // 创建方法对象
   const methods: CanvasComponentRef = {
     addRectangle,
+    addRoundedRect,
     addCircle,
     addTriangle,
     addLine,
     addPolyline,
     addText,
+    addSvgIcon,
     deleteSelected,
     clearCanvas,
     exportCanvas,

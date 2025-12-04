@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/Button';
 
-export type ToolType = 'select' | 'rectangle' | 'circle' | 'triangle' | 'line' | 'text' | 'delete' | 'clear';
+export type ToolType = 'select' | 'rectangle' | 'roundedRect' | 'circle' | 'triangle' | 'line' | 'text' | 'delete' | 'clear';
 
 export interface ToolbarProps {
   currentTool: ToolType;
@@ -21,6 +21,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const tools = [
     { id: 'select', label: '选择', icon: '↖', shortcut: 'V' },
     { id: 'rectangle', label: '矩形', icon: '▢', shortcut: 'R' },
+    { id: 'roundedRect', label: '圆角矩形', icon: '▭', shortcut: 'U' },
     { id: 'circle', label: '圆形', icon: '○', shortcut: 'C' },
     { id: 'triangle', label: '三角形', icon: '△', shortcut: 'T' },
     { id: 'line', label: '线条', icon: '╱', shortcut: 'L' },
@@ -104,7 +105,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <div className="text-xs text-gray-500 flex items-center justify-between">
         <span>当前工具: {tools.find(t => t.id === currentTool)?.label || currentTool}</span>
         <div className="flex gap-4">
-          <span>快捷键提示: V-选择 R-矩形 C-圆形 T-三角形 L-线条 X-文字</span>
+          <span>快捷键提示: V-选择 R-矩形 U-圆角矩形 C-圆形 T-三角形 L-线条 X-文字</span>
         </div>
       </div>
     </div>

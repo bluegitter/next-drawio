@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/Button';
 
-export type ToolType = 'select' | 'rectangle' | 'circle' | 'triangle' | 'line' | 'polyline' | 'text' | 'delete' | 'clear' | 'connect';
+export type ToolType = 'select' | 'rectangle' | 'roundedRect' | 'circle' | 'triangle' | 'line' | 'polyline' | 'text' | 'delete' | 'clear' | 'connect';
 
 export interface EnhancedToolbarProps {
   currentTool: ToolType;
@@ -31,6 +31,7 @@ export const EnhancedToolbar: React.FC<EnhancedToolbarProps> = ({
   const tools = [
     { id: 'select' as ToolType, label: '选择', icon: '↖', shortcut: 'V' },
     { id: 'rectangle' as ToolType, label: '矩形', icon: '▢', shortcut: 'R' },
+    { id: 'roundedRect' as ToolType, label: '圆角矩形', icon: '▭', shortcut: 'U' },
     { id: 'circle' as ToolType, label: '圆形', icon: '○', shortcut: 'C' },
     { id: 'triangle' as ToolType, label: '三角形', icon: '△', shortcut: 'T' },
     { id: 'line' as ToolType, label: '直线', icon: '╱', shortcut: 'L' },
@@ -147,7 +148,7 @@ export const EnhancedToolbar: React.FC<EnhancedToolbarProps> = ({
           )}
         </div>
         <div className="flex gap-4">
-          <span>快捷键: V-选择 R-矩形 C-圆形 T-三角形 L-直线 P-折线 X-文字 N-连接</span>
+          <span>快捷键: V-选择 R-矩形 U-圆角矩形 C-圆形 T-三角形 L-直线 P-折线 X-文字 N-连接</span>
           <span>Shift+点击: 创建连接</span>
         </div>
       </div>
