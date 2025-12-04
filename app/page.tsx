@@ -1,65 +1,320 @@
-import Image from "next/image";
+"use client";
+
+import React, { useRef, useCallback, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { EnhancedToolbar, ToolType } from '@/components/EnhancedToolbar';
+import InteractiveCanvasComponent, { CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
+import PropertyPanel from '@/components/PropertyPanel';
+import './globals.css';
 
 export default function Home() {
+  const [canvasWidth, setCanvasWidth] = useState<number>(1800);
+  const [canvasHeight, setCanvasHeight] = useState<number>(900);
+  const [backgroundColor, setBackgroundColor] = useState<string>('#ffffff');
+  const [currentTool, setCurrentTool] = useState<ToolType>('select');
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [selectedShape, setSelectedShape] = useState<SVGElement | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
+
+  const refreshHistoryState = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      setCanUndo(canvasMethodsRef.current.canUndo());
+      setCanRedo(canvasMethodsRef.current.canRedo());
+    }
+  }, []);
+
+  const handleCanvasReady = useCallback((canvas: SVGSVGElement, methods: CanvasComponentRef) => {
+    console.log('Advanced Canvas initialized:', canvas);
+    canvasMethodsRef.current = methods;
+    refreshHistoryState();
+  }, [refreshHistoryState]);
+
+  const handleCanvasError = useCallback((error: Error) => {
+    console.error('Canvas initialization failed:', error);
+  }, []);
+
+  const handleToolChange = useCallback((tool: ToolType) => {
+    setCurrentTool(tool);
+    setIsConnecting(tool === 'connect');
+    
+    if (canvasMethodsRef.current) {
+      switch (tool) {
+        case 'rectangle':
+          canvasMethodsRef.current.addRectangle();
+          break;
+        case 'circle':
+          canvasMethodsRef.current.addCircle();
+          break;
+        case 'triangle':
+          canvasMethodsRef.current.addTriangle();
+          break;
+        case 'line':
+          canvasMethodsRef.current.addLine();
+          break;
+        case 'polyline':
+          canvasMethodsRef.current.addPolyline();
+          break;
+        case 'text':
+          canvasMethodsRef.current.addText();
+          break;
+        case 'delete':
+          canvasMethodsRef.current.deleteSelected();
+          break;
+        case 'clear':
+          if (window.confirm('确定要清空画布吗？此操作可能可以通过撤销恢复。')) {
+            canvasMethodsRef.current.clearCanvas();
+          }
+          break;
+        case 'connect':
+          break;
+      }
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleExport = useCallback((format: 'png' | 'jpg' | 'svg') => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.exportCanvas(format);
+    }
+  }, []);
+
+  const handleShapeSelect = useCallback((shape: SVGElement | null) => {
+    setSelectedShape(shape);
+  }, []);
+
+  const handleCanvasChange = useCallback(() => {
+    refreshHistoryState();
+  }, [refreshHistoryState]);
+
+  // 属性面板处理函数
+  const handleFillChange = useCallback((color: string) => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.changeSelectedFill(color);
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleStrokeChange = useCallback((color: string) => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.changeSelectedStroke(color);
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleStrokeWidthChange = useCallback((width: number) => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.changeSelectedStrokeWidth(width);
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleRotationChange = useCallback((rotation: number) => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.rotateSelected(rotation);
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleScaleChange = useCallback((scale: number) => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.scaleSelected(scale);
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleOpacityChange = useCallback((opacity: number) => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.changeSelectedOpacity(opacity);
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleDelete = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.deleteSelected();
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleDuplicate = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.duplicateSelected();
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleBringToFront = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.bringToFront();
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleSendToBack = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.sendToBack();
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleUndo = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.undo();
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleRedo = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.redo();
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* 增强工具栏 */}
+      <EnhancedToolbar 
+        currentTool={currentTool}
+        onToolChange={handleToolChange}
+        onExport={handleExport}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        disabled={false}
+        isConnecting={isConnecting}
+      />
+
+      {/* 主工作区 */}
+      <div className="flex flex-1">
+        {/* 左侧工具面板 */}
+        <div className="w-16 bg-white border-r border-gray-200 p-2 space-y-2">
+          <Button size="sm" variant="ghost" title="选择工具" onClick={() => handleToolChange('select')}>↖</Button>
+          <Button size="sm" variant="ghost" title="矩形工具" onClick={() => handleToolChange('rectangle')}>▢</Button>
+          <Button size="sm" variant="ghost" title="圆形工具" onClick={() => handleToolChange('circle')}>○</Button>
+          <Button size="sm" variant="ghost" title="三角形工具" onClick={() => handleToolChange('triangle')}>△</Button>
+          <Button size="sm" variant="ghost" title="直线工具" onClick={() => handleToolChange('line')}>╱</Button>
+          <Button size="sm" variant="ghost" title="折线工具" onClick={() => handleToolChange('polyline')}>⎍</Button>
+          <Button size="sm" variant="ghost" title="文字工具" onClick={() => handleToolChange('text')}>T</Button>
+          <Button size="sm" variant="ghost" title="连接工具" onClick={() => handleToolChange('connect')}>🔗</Button>
+          <div className="w-px h-px bg-gray-300 my-2"></div>
+          <Button size="sm" variant="ghost" title="钢笔工具">✏</Button>
+          <Button size="sm" variant="ghost" title="手形工具">✋</Button>
+          <Button size="sm" variant="ghost" title="缩放工具">🔍</Button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        {/* 画布区域 */}
+        <div className="flex-1 bg-gray-100 p-4 overflow-auto">
+          <div className="flex items-center justify-center min-h-full">
+            <InteractiveCanvasComponent
+              width={canvasWidth}
+              height={canvasHeight}
+              backgroundColor={backgroundColor}
+              onReady={handleCanvasReady}
+              onError={handleCanvasError}
+              onShapeSelect={handleShapeSelect}
+              onCanvasChange={handleCanvasChange}
+              autoResize={false}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
         </div>
-      </main>
+
+        {/* 属性面板 */}
+        <PropertyPanel
+          selectedShape={selectedShape}
+          onFillChange={handleFillChange}
+          onStrokeChange={handleStrokeChange}
+          onStrokeWidthChange={handleStrokeWidthChange}
+          onRotationChange={handleRotationChange}
+          onScaleChange={handleScaleChange}
+          onOpacityChange={handleOpacityChange}
+          onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
+          onBringToFront={handleBringToFront}
+          onSendToBack={handleSendToBack}
+        />
+
+        {/* 右侧设置面板 */}
+        <div className="w-64 bg-white border-l border-gray-200 p-4">
+          <h3 className="text-lg font-semibold mb-4">画布设置</h3>
+          
+          <div className="space-y-4">
+            {/* 画布设置 */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">画布宽度</label>
+              <Input
+                type="number"
+                value={String(canvasWidth)}
+                onChange={(value) => setCanvasWidth(Number(value))}
+                placeholder="宽度"
+                min="100"
+                max="2000"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">画布高度</label>
+              <Input
+                type="number"
+                value={String(canvasHeight)}
+                onChange={(value) => setCanvasHeight(Number(value))}
+                placeholder="高度"
+                min="100"
+                max="2000"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">背景颜色</label>
+              <Input
+                type="color"
+                value={backgroundColor}
+                onChange={setBackgroundColor}
+                placeholder="背景颜色"
+              />
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">画布操作</h4>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                  onClick={handleUndo}
+                >
+                  撤销
+                </button>
+                <button
+                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                  onClick={handleRedo}
+                >
+                  重做
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 底部状态栏 */}
+      <div className="bg-gray-800 text-white px-4 py-1">
+        <div className="flex items-center justify-between text-xs">
+          <span>Next-DrawIO Pro v3.0.0 - 高级版</span>
+          <span>画布: {canvasWidth} × {canvasHeight}px</span>
+          <span>当前工具: {currentTool === 'select' ? '选择' : 
+                      currentTool === 'rectangle' ? '矩形' :
+                      currentTool === 'circle' ? '圆形' :
+                      currentTool === 'triangle' ? '三角形' :
+                      currentTool === 'line' ? '直线' :
+                      currentTool === 'polyline' ? '折线' :
+                      currentTool === 'text' ? '文字' :
+                      currentTool === 'connect' ? '连接' : currentTool}</span>
+          <span>支持网格、对齐、自由绘制</span>
+        </div>
+      </div>
     </div>
   );
 }
