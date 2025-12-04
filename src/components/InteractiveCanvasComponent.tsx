@@ -147,6 +147,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const lastPointerRef = useRef<{ x: number; y: number; clientX: number; clientY: number }>({ x: 0, y: 0, clientX: 0, clientY: 0 });
   const resizeHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
   const textSelectionRef = useRef<Map<string, SVGRectElement>>(new Map());
+  const copyBufferRef = useRef<string[]>([]);
   const selectedShape = useMemo(() => {
     const first = selectedIds.values().next();
     return first.done ? null : first.value;
@@ -1996,81 +1997,139 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     return selectedShape ? document.getElementById(selectedShape) : null;
   }, [selectedShape]);
 
-  const duplicateSelected = useCallback(() => {
-    if (!selectedShape || !svgRef.current) return;
-    const sourceShape = shapes.find(shape => shape.id === selectedShape);
-    if (!sourceShape) return;
+  const duplicateSelected = useCallback((ids?: Set<string> | string[]) => {
+    const targetIds = ids ? (ids instanceof Set ? ids : new Set(ids)) : selectedIds;
+    if (targetIds.size === 0 || !svgRef.current) return;
 
     const offset = 20;
-    const newId = generateId();
-    const clonedElement = sourceShape.element.cloneNode(true) as SVGElement;
-    clonedElement.setAttribute('id', newId);
+    const idMap = new Map<string, string>();
+    const newShapes: SVGShape[] = [];
 
-    const newData = { ...sourceShape.data };
+    // 先复制非连接线的图形
+    shapes.forEach(sourceShape => {
+      if (!targetIds.has(sourceShape.id)) return;
+      if (sourceShape.type === 'line' || sourceShape.type === 'connector') return;
 
-    switch (sourceShape.type) {
-      case 'rect':
-        newData.x = (sourceShape.data.x || 0) + offset;
-        newData.y = (sourceShape.data.y || 0) + offset;
-        clonedElement.setAttribute('x', String(newData.x));
-        clonedElement.setAttribute('y', String(newData.y));
-        break;
-      case 'circle':
-        newData.x = (sourceShape.data.x || 0) + offset;
-        newData.y = (sourceShape.data.y || 0) + offset;
-        clonedElement.setAttribute('cx', String(newData.x));
-        clonedElement.setAttribute('cy', String(newData.y));
-        break;
-      case 'triangle':
-        const srcPoints = sourceShape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        const shiftedPoints = srcPoints.map(([x, y]) => `${x + offset},${y + offset}`).join(' ');
-        newData.points = shiftedPoints;
-        clonedElement.setAttribute('points', shiftedPoints);
-        break;
-      case 'text':
-        newData.x = (sourceShape.data.x || 0) + offset;
-        newData.y = (sourceShape.data.y || 0) + offset;
-        clonedElement.setAttribute('x', String(newData.x));
-        clonedElement.setAttribute('y', String(newData.y));
-        break;
-      case 'line':
-      case 'connector':
-        newData.x1 = (sourceShape.data.x1 || 0) + offset;
-        newData.y1 = (sourceShape.data.y1 || 0) + offset;
-        newData.x2 = (sourceShape.data.x2 || 0) + offset;
-        newData.y2 = (sourceShape.data.y2 || 0) + offset;
-        clonedElement.setAttribute('x1', String(newData.x1));
-        clonedElement.setAttribute('y1', String(newData.y1));
-        clonedElement.setAttribute('x2', String(newData.x2));
-        clonedElement.setAttribute('y2', String(newData.y2));
-        break;
-      case 'polyline':
-        const polyPoints = sourceShape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        const newPolyPoints = polyPoints.map(([x, y]) => `${x + offset},${y + offset}`).join(' ');
-        newData.points = newPolyPoints;
-        clonedElement.setAttribute('points', newPolyPoints);
-        break;
-    }
+      const newId = generateId();
+      idMap.set(sourceShape.id, newId);
+      const clonedElement = sourceShape.element.cloneNode(true) as SVGElement;
+      clonedElement.setAttribute('id', newId);
+      const newData = { ...sourceShape.data };
 
-    const duplicatedShape: SVGShape = {
-      ...sourceShape,
-      id: newId,
-      element: clonedElement,
-      data: newData,
-      connections: [],
-    };
+      switch (sourceShape.type) {
+        case 'rect':
+          newData.x = (sourceShape.data.x || 0) + offset;
+          newData.y = (sourceShape.data.y || 0) + offset;
+          clonedElement.setAttribute('x', String(newData.x));
+          clonedElement.setAttribute('y', String(newData.y));
+          break;
+        case 'circle':
+          newData.x = (sourceShape.data.x || 0) + offset;
+          newData.y = (sourceShape.data.y || 0) + offset;
+          clonedElement.setAttribute('cx', String(newData.x));
+          clonedElement.setAttribute('cy', String(newData.y));
+          break;
+        case 'triangle': {
+          const srcPoints = sourceShape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
+          const shiftedPoints = srcPoints.map(([x, y]) => `${x + offset},${y + offset}`).join(' ');
+          newData.points = shiftedPoints;
+          clonedElement.setAttribute('points', shiftedPoints);
+          break;
+        }
+        case 'text': {
+          const newX = (sourceShape.data.x || 0) + offset;
+          const newY = (sourceShape.data.y || 0) + offset;
+          newData.x = newX;
+          newData.y = newY;
+          newData.width = sourceShape.data.width;
+          newData.height = sourceShape.data.height;
+          clonedElement.setAttribute('x', String(newX));
+          clonedElement.setAttribute('y', String(newY));
+          if (sourceShape.element instanceof SVGForeignObjectElement) {
+            clonedElement.setAttribute('width', String(sourceShape.data.width || sourceShape.element.getAttribute('width') || 200));
+            clonedElement.setAttribute('height', String(sourceShape.data.height || sourceShape.element.getAttribute('height') || 60));
+          }
+          break;
+        }
+        case 'polyline': {
+          const polyPoints = sourceShape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
+          const newPolyPoints = polyPoints.map(([x, y]) => `${x + offset},${y + offset}`).join(' ');
+          newData.points = newPolyPoints;
+          clonedElement.setAttribute('points', newPolyPoints);
+          break;
+        }
+      }
 
-    applyTransform(duplicatedShape);
-    svgRef.current.appendChild(clonedElement);
-
-    setShapes(prev => {
-      const updated = [...prev, duplicatedShape];
-      saveToHistory(updated, newId);
-      return updated;
+      const duplicatedShape: SVGShape = {
+        ...sourceShape,
+        id: newId,
+        element: clonedElement,
+        data: newData,
+        connections: [],
+      };
+      applyTransform(duplicatedShape);
+      svgRef.current.appendChild(clonedElement);
+      newShapes.push(duplicatedShape);
     });
-    setSelectedShape(newId);
-    onShapeSelect?.(clonedElement);
-  }, [applyTransform, generateId, onShapeSelect, saveToHistory, selectedShape, shapes]);
+
+    // 再复制连接线（仅当两端都在选中集合）
+    shapes.forEach(sourceShape => {
+      if (!targetIds.has(sourceShape.id)) return;
+      if (sourceShape.type !== 'line' && sourceShape.type !== 'connector') return;
+      const [from, to] = (sourceShape.connections || []) as Array<string | null | undefined>;
+      if (!from || !to) return;
+      const newFrom = idMap.get(from);
+      const newTo = idMap.get(to);
+      if (!newFrom || !newTo) return;
+
+      const fromShape = [...newShapes, ...shapes].find(s => s.id === newFrom);
+      const toShape = [...newShapes, ...shapes].find(s => s.id === newTo);
+      if (!fromShape || !toShape) return;
+
+      const newId = generateId();
+      const connector = createSVGElement('line');
+      if (!connector) return;
+      connector.setAttribute('id', newId);
+      connector.setAttribute('stroke', sourceShape.data.stroke);
+      connector.setAttribute('stroke-width', String(sourceShape.data.strokeWidth || 2));
+      connector.setAttribute('fill', 'none');
+      connector.setAttribute('cursor', 'pointer');
+
+      const startPoint = getPortPositionById(fromShape, sourceShape.data.startPortId) || getShapeCenter(fromShape);
+      const endPoint = getPortPositionById(toShape, sourceShape.data.endPortId) || getShapeCenter(toShape);
+      connector.setAttribute('x1', String(startPoint.x));
+      connector.setAttribute('y1', String(startPoint.y));
+      connector.setAttribute('x2', String(endPoint.x));
+      connector.setAttribute('y2', String(endPoint.y));
+
+      const duplicatedShape: SVGShape = {
+        ...sourceShape,
+        id: newId,
+        element: connector,
+        data: {
+          ...sourceShape.data,
+          x1: startPoint.x,
+          y1: startPoint.y,
+          x2: endPoint.x,
+          y2: endPoint.y,
+        },
+        connections: [newFrom, newTo],
+      };
+      svgRef.current.appendChild(connector);
+      newShapes.push(duplicatedShape);
+    });
+
+    if (newShapes.length === 0) return;
+
+    const mergedShapes = [...shapes, ...newShapes];
+    setShapes(mergedShapes);
+    const newIds = newShapes.map(s => s.id);
+    setSelectedIds(new Set(newIds));
+    copyBufferRef.current = newIds;
+    onShapeSelect?.(mergedShapes.find(s => s.id === newIds[0])?.element || null);
+    saveToHistory(mergedShapes, newIds);
+    return newIds;
+  }, [applyTransform, createSVGElement, generateId, getPortPositionById, getShapeCenter, onShapeSelect, saveToHistory, selectedIds, shapes]);
 
   const bringToFront = useCallback(() => {
     if (!selectedShape || !svgRef.current) return;
@@ -2433,9 +2492,20 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         deleteSelected();
+      } else if (meta && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        copyBufferRef.current = Array.from(selectedIds);
       } else if (meta && e.key.toLowerCase() === 'd') {
         e.preventDefault();
         duplicateSelected();
+      } else if (meta && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        if (copyBufferRef.current.length > 0) {
+          const newIds = duplicateSelected(copyBufferRef.current);
+          if (newIds && newIds.length) {
+            copyBufferRef.current = newIds;
+          }
+        }
       } else if (meta && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -2461,7 +2531,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteSelected, duplicateSelected, isConnecting, redo, tempLine, undo]);
+  }, [deleteSelected, duplicateSelected, isConnecting, redo, tempLine, undo, selectedIds]);
 
   // 创建方法对象
   const methods: CanvasComponentRef = {
