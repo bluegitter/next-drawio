@@ -143,7 +143,7 @@ export const triangleShape: ShapeDefinition = {
     };
     return directions.map(portDir => {
       let best: HitPoint | null = null;
-      edges.forEach(([a, b]) => {
+      for (const [a, b] of edges) {
         const hit = intersectRaySegment(
           { x: centroid[0], y: centroid[1] },
           portDir.dir,
@@ -151,7 +151,7 @@ export const triangleShape: ShapeDefinition = {
           { x: b[0], y: b[1] }
         );
         if (hit && (!best || hit.t < best.t)) best = hit;
-      });
+      }
       const hitPoint: Point = best ? { x: best.x, y: best.y } : { x: centroid[0], y: centroid[1] };
       return { id: portDir.id, x: hitPoint.x, y: hitPoint.y, position: portDir.position };
     });

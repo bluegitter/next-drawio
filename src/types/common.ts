@@ -40,10 +40,7 @@ export interface Color {
   a: number; // 0-1
 }
 
-export interface GradientStop {
-  offset: number; // 0-1
-  color: string;
-}
+// GradientStop 类型定义在 canvas.ts 和 style.ts 中
 
 export interface Rect extends Point, Size {}
 
@@ -55,14 +52,7 @@ export interface Polygon {
   points: Point[];
 }
 
-export interface PathData {
-  commands: PathCommand[];
-}
-
-export interface PathCommand {
-  type: 'M' | 'L' | 'C' | 'Q' | 'Z' | 'H' | 'V' | 'S' | 'T';
-  params: number[];
-}
+// PathData 和 PathCommand 类型定义在 canvas.ts 中
 
 // 事件类型
 export interface BaseEvent {
@@ -125,7 +115,13 @@ export type DeepPartial<T> = {
 // 渲染上下文
 export interface RenderContext {
   ctx: CanvasRenderingContext2D;
-  viewport: Viewport;
+  viewport: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    zoom: number;
+  };
   zoom: number;
   devicePixelRatio: number;
   isHitTest: boolean;
@@ -134,7 +130,13 @@ export interface RenderContext {
 // 交互上下文
 export interface InteractionContext {
   engine: any; // CanvasEngine - 避免循环依赖
-  viewport: Viewport;
+  viewport: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    zoom: number;
+  };
   activeTool: string;
   selectedObjects: string[];
   modifiers: {
@@ -187,14 +189,7 @@ export interface PerformanceMetrics {
   canvasSize: Size;
 }
 
-// 历史记录
-export interface HistoryState {
-  id: string;
-  timestamp: number;
-  action: string;
-  data: any;
-  previousState?: string;
-}
+// HistoryState 类型定义在 canvas.ts 中
 
 // 主题类型
 export type Theme = 'light' | 'dark' | 'auto';

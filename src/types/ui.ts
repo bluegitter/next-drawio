@@ -25,7 +25,7 @@ export interface ButtonProps
 
 // 输入框类型
 export interface InputProps 
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'size'> {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;

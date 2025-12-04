@@ -123,7 +123,6 @@ export interface ToolOptions {
   
   // 矩形工具选项
   cornerRadius?: number;
-  fromCenter?: boolean;
   
   // 圆形工具选项
   fromCenter?: boolean;
