@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 
 export interface CanvasComponentRef {
   addRectangle: () => void;
@@ -80,7 +80,7 @@ interface ResizeHandle {
 
 interface HistoryState {
   shapes: SVGShape[];
-  selectedShape: string | null;
+  selectedIds: string[];
 }
 
 export const CanvasComponent: React.FC<CanvasComponentProps> = ({
@@ -95,8 +95,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [shapes, setShapes] = useState<SVGShape[]>([]);
-  const [selectedShape, setSelectedShape] = useState<string | null>(null);
-  const [history, setHistory] = useState<HistoryState[]>([{ shapes: [], selectedShape: null }]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [history, setHistory] = useState<HistoryState[]>([{ shapes: [], selectedIds: [] }]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -105,7 +105,6 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [shapeStartPos, setShapeStartPos] = useState({ x: 0, y: 0 });
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [tempLine, setTempLine] = useState<SVGElement | null>(null);
   const shapeIdCounter = useRef(0);
@@ -114,6 +113,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const portElementsRef = useRef<Map<string, SVGElement[]>>(new Map());
   const [connectionStartPort, setConnectionStartPort] = useState<string | null>(null);
   const connectorHandleRef = useRef<Map<string, { start: SVGCircleElement; end: SVGCircleElement }>>(new Map());
+  const skipNextCanvasClickClear = useRef(false);
   const [draggingHandle, setDraggingHandle] = useState<{
     connectorId: string;
     end: 'start' | 'end';
@@ -131,6 +131,16 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const lastPointerRef = useRef<{ x: number; y: number; clientX: number; clientY: number }>({ x: 0, y: 0, clientX: 0, clientY: 0 });
   const resizeHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
   const textSelectionRef = useRef<Map<string, SVGRectElement>>(new Map());
+  const selectedShape = useMemo(() => {
+    const first = selectedIds.values().next();
+    return first.done ? null : first.value;
+  }, [selectedIds]);
+  const setSelectedShape = useCallback((id: string | null) => {
+    setSelectedIds(id ? new Set([id]) : new Set());
+  }, []);
+  const setSelectedShapes = useCallback((ids: string[]) => {
+    setSelectedIds(new Set(ids));
+  }, []);
 
   // 生成唯一ID
   const generateId = useCallback(() => {
@@ -138,7 +148,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   }, []);
 
   // 保存到历史记录
-  const saveToHistory = useCallback((snapshotShapes?: SVGShape[], snapshotSelected?: string | null) => {
+  const saveToHistory = useCallback((snapshotShapes?: SVGShape[], snapshotSelectedIds?: string[] | Set<string> | string | null) => {
     const shapesToStore = (snapshotShapes ?? shapes).map(shape => ({
       ...shape,
       data: { ...shape.data },
@@ -146,9 +156,20 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       element: shape.element.cloneNode(true) as SVGElement,
     }));
 
-    const selectedToStore = snapshotSelected ?? selectedShape;
+    let selectedToStore: string[];
+    if (snapshotSelectedIds === null) {
+      selectedToStore = [];
+    } else if (snapshotSelectedIds instanceof Set) {
+      selectedToStore = Array.from(snapshotSelectedIds);
+    } else if (Array.isArray(snapshotSelectedIds)) {
+      selectedToStore = snapshotSelectedIds;
+    } else if (typeof snapshotSelectedIds === 'string') {
+      selectedToStore = [snapshotSelectedIds];
+    } else {
+      selectedToStore = Array.from(selectedIds);
+    }
     const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push({ shapes: shapesToStore, selectedShape: selectedToStore });
+    newHistory.push({ shapes: shapesToStore, selectedIds: selectedToStore });
 
     if (newHistory.length > 50) {
       newHistory.shift();
@@ -157,7 +178,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     onCanvasChange?.();
-  }, [history, historyIndex, onCanvasChange, selectedShape, shapes]);
+  }, [history, historyIndex, onCanvasChange, selectedIds, shapes]);
 
   // 创建命名空间
   const createSVGElement = useCallback((tagName: string) => {
@@ -812,8 +833,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         }
       });
     }
-    saveToHistory(shapes, selectedShape);
-  }, [refreshResizeHandles, saveToHistory, selectedShape, shapes, showTextSelection, updateConnectionLine]);
+    saveToHistory(shapes, selectedIds);
+  }, [refreshResizeHandles, saveToHistory, selectedIds, shapes, showTextSelection, updateConnectionLine]);
 
   // 更新图形大小
   const updateShapeSize = useCallback((shape: SVGShape, handle: string, dx: number, dy: number) => {
@@ -951,13 +972,14 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     });
 
     setShapes(restoredShapes);
-    setSelectedShape(state.selectedShape);
+    setSelectedIds(new Set(state.selectedIds || []));
     setIsConnecting(false);
     setConnectionStart(null);
     setTempLine(null);
 
-    if (state.selectedShape) {
-      const targetElement = restoredShapes.find(s => s.id === state.selectedShape)?.element ?? null;
+    const primary = state.selectedIds?.[0] ?? null;
+    if (primary) {
+      const targetElement = restoredShapes.find(s => s.id === primary)?.element ?? null;
       onShapeSelect?.(targetElement || null);
     } else {
       onShapeSelect?.(null);
@@ -974,9 +996,9 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     setShapes(updatedShapes);
 
     if (!options?.skipHistory) {
-      saveToHistory(updatedShapes, selectedShape);
+      saveToHistory(updatedShapes, selectedIds);
     }
-  }, [saveToHistory, selectedShape, shapes]);
+  }, [saveToHistory, selectedIds, selectedShape, shapes]);
 
   // 添加矩形
   const addRectangle = useCallback(() => {
@@ -1347,8 +1369,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     setIsConnecting(false);
     setConnectionStart(null);
     setConnectionStartPort(null);
-    saveToHistory(finalShapes, selectedShape);
-  }, [createSVGElement, generateId, getPortPositionById, getShapeCenter, saveToHistory, selectedShape, shapes, tempLine]);
+    saveToHistory(finalShapes, selectedIds);
+  }, [createSVGElement, generateId, getPortPositionById, getShapeCenter, saveToHistory, selectedIds, shapes, tempLine]);
 
   // 鼠标移动事件处理
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
@@ -1439,29 +1461,40 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         tempLine.setAttribute('x2', String(x));
         tempLine.setAttribute('y2', String(y));
       }
-    } else if (isDragging && selectedShape) {
-      // 拖拽图形
+    } else if (isDragging && selectedIds.size > 0) {
+      // 拖拽选中的图形集合
       const dx = x - dragStart.x;
       const dy = y - dragStart.y;
       
-      const shape = shapes.find(s => s.id === selectedShape);
-      if (shape) {
-        updateShapePosition(shape, dx, dy);
-        refreshResizeHandles(shape);
-        const nextShapes = shapes.map(s => s.id === shape.id ? { ...shape, data: { ...shape.data }, connections: shape.connections ? [...shape.connections] : undefined, element: shape.element } : s);
-        shape.connections?.forEach(connId => {
-          const connLine = nextShapes.find(s => s.id === connId);
-          if (connLine && (connLine.type === 'line' || connLine.type === 'polyline' || connLine.type === 'connector')) {
-            updateConnectionLine(connLine, shape.id, nextShapes);
+      if (dx !== 0 || dy !== 0) {
+        selectedIds.forEach(id => {
+          const shape = shapes.find(s => s.id === id);
+          if (shape) {
+            if ((shape.type === 'line' || shape.type === 'connector') && isLineConnected(shape)) {
+              return;
+            }
+            updateShapePosition(shape, dx, dy);
+            refreshResizeHandles(shape);
           }
         });
+
+        const nextShapes = shapes.map(s => selectedIds.has(s.id)
+          ? { ...s, data: { ...s.data }, connections: s.connections ? [...s.connections] : undefined, element: s.element }
+          : s);
+
+        selectedIds.forEach(id => {
+          const moved = nextShapes.find(s => s.id === id);
+          if (moved && moved.connections) {
+            moved.connections.forEach(connId => {
+              const connLine = nextShapes.find(s => s.id === connId);
+              if (connLine && (connLine.type === 'line' || connLine.type === 'polyline' || connLine.type === 'connector')) {
+                updateConnectionLine(connLine, moved.id, nextShapes);
+              }
+            });
+          }
+        });
+
         setShapes(nextShapes);
-        // 对线段整体拖动使用起始端点记位，其余保持原逻辑
-        if (shape.type === 'line' || shape.type === 'connector') {
-          setShapeStartPos({ x: (shape.data.x1 || 0) + dx, y: (shape.data.y1 || 0) + dy });
-        } else {
-          setShapeStartPos({ x: shapeStartPos.x + dx, y: shapeStartPos.y + dy });
-        }
       }
       
       setDragStart({ x, y });
@@ -1522,7 +1555,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         setHoveredShapeId(null);
       }
     }
-  }, [activePortHighlight, dragStart, draggingHandle, findNearestPortElement, getShapeBounds, getShapeCenter, hidePorts, highlightPortStyle, hoveredShapeId, isConnecting, isDragging, isResizing, isSelectingBox, resetPortStyle, selectedShape, selectionRect, shapes, shapeStartPos, resizeHandle, showPorts, tempLine, connectionStart, updateShapePosition, updateShapeSize, refreshResizeHandles, updateConnectionLine]);
+  }, [activePortHighlight, dragStart, draggingHandle, findNearestPortElement, getShapeBounds, getShapeCenter, hidePorts, highlightPortStyle, hoveredShapeId, isConnecting, isDragging, isResizing, isSelectingBox, isLineConnected, resetPortStyle, selectedIds, selectionRect, shapes, resizeHandle, showPorts, tempLine, connectionStart, updateShapePosition, updateShapeSize, refreshResizeHandles, updateConnectionLine]);
 
   // 鼠标释放事件处理
   const finalizeHandleConnection = useCallback((targetEl: SVGElement | null, point: { x: number; y: number }) => {
@@ -1614,7 +1647,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         setShapes(finalShapes);
         setSelectedShape(connectorId);
         onShapeSelect?.(edge.element);
-        saveToHistory(finalShapes, selectedShape);
+        saveToHistory(finalShapes, selectedIds);
       }
     }
 
@@ -1632,7 +1665,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       hidePorts(hoveredShapeId);
       setHoveredShapeId(null);
     }
-  }, [activePortHighlight, draggingHandle, findNearestPortElement, getPortPositionById, getShapeCenter, handleConnectionRef, hidePorts, hoveredShapeId, onShapeSelect, refreshResizeHandles, resetPortStyle, saveToHistory, selectedShape, setSelectedShape, shapes, showConnectorHandles, showTextSelection, updateConnectionLine]);
+  }, [activePortHighlight, draggingHandle, findNearestPortElement, getPortPositionById, getShapeCenter, handleConnectionRef, hidePorts, hoveredShapeId, onShapeSelect, refreshResizeHandles, resetPortStyle, saveToHistory, selectedIds, setSelectedShape, shapes, showConnectorHandles, showTextSelection, updateConnectionLine]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (draggingHandle) {
@@ -1664,16 +1697,18 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     } else if (isDragging || isResizing) {
       saveToHistory();
     } else if (isSelectingBox && selectionRect) {
-      const selected = shapes.find(shape => {
+      const selectedList = shapes.filter(shape => {
         const b = getShapeBounds(shape);
         return b.minX >= selectionRect.x &&
           b.maxX <= selectionRect.x + selectionRect.w &&
           b.minY >= selectionRect.y &&
           b.maxY <= selectionRect.y + selectionRect.h;
       });
-      if (selected) {
-        setSelectedShape(selected.id);
-        onShapeSelect?.(selected.element);
+      if (selectedList.length) {
+        const ids = selectedList.map(s => s.id);
+        setSelectedShapes(ids);
+        onShapeSelect?.(selectedList[0].element);
+        skipNextCanvasClickClear.current = true;
       }
     }
 
@@ -1700,7 +1735,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     setIsResizing(false);
     setResizeHandle(null);
     setDragStart({ x: 0, y: 0 });
-  }, [connectShapes, connectionStart, connectionStartPort, getShapeBounds, isConnecting, isDragging, isResizing, isSelectingBox, onShapeSelect, saveToHistory, selectionRect, setSelectedShape, shapes, tempLine]);
+  }, [connectShapes, connectionStart, connectionStartPort, getShapeBounds, isConnecting, isDragging, isResizing, isSelectingBox, onShapeSelect, saveToHistory, selectionRect, setSelectedShape, setSelectedShapes, shapes, tempLine]);
 
   // 图形鼠标按下事件处理
   const handleShapeMouseDown = useCallback((e: React.MouseEvent, shape: SVGShape) => {
@@ -1725,24 +1760,24 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       // Shift+点击创建连接
       startConnection(selectedShape);
     } else {
-      // 普通选择
-      setSelectedShape(shape.id);
+      const alreadySelected = selectedIds.has(shape.id);
+      if (!alreadySelected) {
+        setSelectedShape(shape.id);
+      }
       onShapeSelect?.(shape.element);
       // 连接线/直线：无连接时可整体拖动；有连接时仅选中
       if ((shape.type === 'line' || shape.type === 'connector') && !isLineConnected(shape)) {
         setIsDragging(true);
         setDragStart({ x, y });
-        setShapeStartPos({ x: shape.data.x1 || 0, y: shape.data.y1 || 0 });
       } else if (shape.type !== 'line' && shape.type !== 'connector') {
         // 记录拖拽起始位置
         setIsDragging(true);
         setDragStart({ x, y });
-        setShapeStartPos({ x: shape.data.x || 0, y: shape.data.y || 0 });
       } else {
         setIsDragging(false);
       }
     }
-  }, [connectShapes, connectionStart, connectionStartPort, isConnecting, isLineConnected, onShapeSelect, selectedShape, startConnection]);
+  }, [connectShapes, connectionStart, connectionStartPort, isConnecting, isLineConnected, onShapeSelect, selectedIds, selectedShape, startConnection]);
 
   // 删除选中图形及关联连接线
   const deleteSelected = useCallback(() => {
@@ -1898,8 +1933,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     svgRef.current.appendChild(target.element);
     const reordered = [...shapes.filter(shape => shape.id !== selectedShape), target];
     setShapes(reordered);
-    saveToHistory(reordered, selectedShape);
-  }, [saveToHistory, selectedShape, shapes]);
+    saveToHistory(reordered, selectedIds);
+  }, [saveToHistory, selectedIds, selectedShape, shapes]);
 
   const sendToBack = useCallback(() => {
     if (!selectedShape || !svgRef.current) return;
@@ -1912,8 +1947,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     }
     const reordered = [target, ...shapes.filter(shape => shape.id !== selectedShape)];
     setShapes(reordered);
-    saveToHistory(reordered, selectedShape);
-  }, [saveToHistory, selectedShape, shapes]);
+    saveToHistory(reordered, selectedIds);
+  }, [saveToHistory, selectedIds, selectedShape, shapes]);
 
   const rotateSelected = useCallback((angle: number) => {
     updateSelectedShape(shape => {
@@ -2084,7 +2119,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     const cleanups: Array<() => void> = [];
 
     shapes.forEach(shape => {
-      const isSelected = shape.id === selectedShape;
+      const isSelected = selectedIds.has(shape.id);
       
       if (isSelected) {
         if (shape.type !== 'text') {
@@ -2182,7 +2217,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     return () => {
       cleanups.forEach(clean => clean());
     };
-  }, [draggingHandle, handleShapeMouseDown, hideConnectorHandles, hidePorts, hideResizeHandles, isConnecting, selectedShape, shapes, showConnectorHandles, showPorts, showResizeHandles, showTextSelection, hideTextSelection, updateTextContent]);
+  }, [draggingHandle, handleShapeMouseDown, hideConnectorHandles, hidePorts, hideResizeHandles, isConnecting, selectedIds, shapes, showConnectorHandles, showPorts, showResizeHandles, showTextSelection, hideTextSelection, updateTextContent]);
 
   // 画布点击事件（取消选择）
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
@@ -2199,6 +2234,10 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (e.target === svgRef.current) {
+      if (skipNextCanvasClickClear.current) {
+        skipNextCanvasClickClear.current = false;
+        return;
+      }
       let shouldClear = true;
 
       // 对线/连接线增加容错：点击位置若靠近当前选中的线，则保持选中
