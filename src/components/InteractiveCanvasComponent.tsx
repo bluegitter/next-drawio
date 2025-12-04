@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { shapeRegistry } from '../shapes';
+import type { ShapeDefinition } from '../shapes/types';
 
 export interface CanvasComponentRef {
   addRectangle: () => void;
@@ -203,126 +205,20 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     return document.createElementNS('http://www.w3.org/2000/svg', tagName);
   }, []);
 
+  const getDef = useCallback((shape: SVGShape): ShapeDefinition | undefined => shapeRegistry[shape.type], []);
+
   // 获取图形的中心点
   const getShapeCenter = useCallback((shape: SVGShape) => {
-    switch (shape.type) {
-      case 'rect':
-        return {
-          x: (shape.data.x || 0) + (shape.data.width || 0) / 2,
-          y: (shape.data.y || 0) + (shape.data.height || 0) / 2,
-        };
-      case 'circle':
-        return { x: shape.data.x || 0, y: shape.data.y || 0 };
-      case 'triangle':
-        // 计算三角形中心点
-        const points = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        if (!points.length) return { x: 0, y: 0 };
-        const centerX = points.reduce((sum, p) => sum + p[0], 0) / points.length;
-        const centerY = points.reduce((sum, p) => sum + p[1], 0) / points.length;
-        return { x: centerX, y: centerY };
-      case 'text':
-        return { x: (shape.data.x || 0) + (shape.data.width || 0) / 2, y: (shape.data.y || 0) + (shape.data.height || 0) / 2 };
-      case 'line':
-      case 'connector': {
-        const x1 = shape.data.x1 || 0;
-        const y1 = shape.data.y1 || 0;
-        const x2 = shape.data.x2 || 0;
-        const y2 = shape.data.y2 || 0;
-        return { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
-      }
-      case 'polyline': {
-        const pts = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        if (!pts.length) return { x: 0, y: 0 };
-        const polyX = pts.reduce((sum, [x]) => sum + x, 0) / pts.length;
-        const polyY = pts.reduce((sum, [, y]) => sum + y, 0) / pts.length;
-        return { x: polyX, y: polyY };
-      }
-      default:
-        return { x: 0, y: 0 };
-    }
-  }, []);
+    const def = getDef(shape);
+    if (def?.getCenter) return def.getCenter(shape);
+    return { x: 0, y: 0 };
+  }, [getDef]);
 
   const getPortPositions = useCallback((shape: SVGShape) => {
-    const cross = (a: { x: number; y: number }, b: { x: number; y: number }) => a.x * b.y - a.y * b.x;
-    const subtract = (a: { x: number; y: number }, b: { x: number; y: number }) => ({ x: a.x - b.x, y: a.y - b.y });
-    const intersectRaySegment = (
-      origin: { x: number; y: number },
-      dir: { x: number; y: number },
-      a: { x: number; y: number },
-      b: { x: number; y: number }
-    ) => {
-      const seg = subtract(b, a);
-      const denom = cross(dir, seg);
-      if (Math.abs(denom) < 1e-6) return null;
-      const diff = subtract(a, origin);
-      const t = cross(diff, seg) / denom; // ray factor
-      const u = cross(diff, dir) / denom; // segment factor
-      if (t <= 0 || u < 0 || u > 1) return null;
-      return { x: origin.x + dir.x * t, y: origin.y + dir.y * t, t };
-    };
-
-    switch (shape.type) {
-      case 'rect': {
-        const x = shape.data.x || 0;
-        const y = shape.data.y || 0;
-        const w = shape.data.width || 0;
-        const h = shape.data.height || 0;
-        const midX = x + w / 2;
-        const midY = y + h / 2;
-        return [
-          { id: `${shape.id}-port-top`, x: midX, y: y, position: 'top' },
-          { id: `${shape.id}-port-right`, x: x + w, y: midY, position: 'right' },
-          { id: `${shape.id}-port-bottom`, x: midX, y: y + h, position: 'bottom' },
-          { id: `${shape.id}-port-left`, x: x, y: midY, position: 'left' },
-        ];
-      }
-      case 'circle': {
-        const cx = shape.data.x || 0;
-        const cy = shape.data.y || 0;
-        const r = shape.data.radius || 0;
-        return [
-          { id: `${shape.id}-port-top`, x: cx, y: cy - r, position: 'top' },
-          { id: `${shape.id}-port-right`, x: cx + r, y: cy, position: 'right' },
-          { id: `${shape.id}-port-bottom`, x: cx, y: cy + r, position: 'bottom' },
-          { id: `${shape.id}-port-left`, x: cx - r, y: cy, position: 'left' },
-        ];
-      }
-      case 'triangle': {
-        const pts = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        if (pts.length === 0) return [];
-        const vertices = pts.slice(0, 3).map(([x, y]) => ({ x, y }));
-        const centroid = {
-          x: vertices.reduce((sum, v) => sum + v.x, 0) / vertices.length,
-          y: vertices.reduce((sum, v) => sum + v.y, 0) / vertices.length,
-        };
-        const edges = [
-          [vertices[0], vertices[1]],
-          [vertices[1], vertices[2]],
-          [vertices[2], vertices[0]],
-        ] as const;
-        const directions = [
-          { id: `${shape.id}-port-top`, dir: { x: 0, y: -1 }, position: 'top' },
-          { id: `${shape.id}-port-right`, dir: { x: 1, y: 0 }, position: 'right' },
-          { id: `${shape.id}-port-bottom`, dir: { x: 0, y: 1 }, position: 'bottom' },
-          { id: `${shape.id}-port-left`, dir: { x: -1, y: 0 }, position: 'left' },
-        ] as const;
-        return directions.map(portDir => {
-          let best: { x: number; y: number; t: number } | null = null;
-          edges.forEach(([a, b]) => {
-            const hit = intersectRaySegment(centroid, portDir.dir, a, b);
-            if (hit && (!best || hit.t < best.t)) {
-              best = hit;
-            }
-          });
-          return best
-            ? { id: portDir.id, x: best.x, y: best.y, position: portDir.position }
-            : { id: portDir.id, x: centroid.x, y: centroid.y, position: portDir.position };
-        });
-      }
-      default:
-        return [];
-    }
-  }, []);
+    const def = getDef(shape);
+    if (def?.getPorts) return def.getPorts(shape);
+    return [];
+  }, [getDef]);
 
   const getPortPositionById = useCallback((shape: SVGShape, portId?: string | null) => {
     if (!portId) return null;
@@ -350,71 +246,10 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   }, []);
 
   const getShapeBounds = useCallback((shape: SVGShape) => {
-    switch (shape.type) {
-      case 'rect':
-        return {
-          minX: shape.data.x || 0,
-          maxX: (shape.data.x || 0) + (shape.data.width || 0),
-          minY: shape.data.y || 0,
-          maxY: (shape.data.y || 0) + (shape.data.height || 0),
-        };
-      case 'circle':
-        return {
-          minX: (shape.data.x || 0) - (shape.data.radius || 0),
-          maxX: (shape.data.x || 0) + (shape.data.radius || 0),
-          minY: (shape.data.y || 0) - (shape.data.radius || 0),
-          maxY: (shape.data.y || 0) + (shape.data.radius || 0),
-        };
-      case 'triangle': {
-        const pts = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        const xs = pts.map(([x]) => x);
-        const ys = pts.map(([, y]) => y);
-        return {
-          minX: Math.min(...xs),
-          maxX: Math.max(...xs),
-          minY: Math.min(...ys),
-          maxY: Math.max(...ys),
-        };
-      }
-      case 'text':
-        if (shape.element instanceof SVGForeignObjectElement) {
-          const bbox = shape.element.getBBox();
-          return {
-            minX: bbox.x,
-            maxX: bbox.x + bbox.width,
-            minY: bbox.y,
-            maxY: bbox.y + bbox.height,
-          };
-        }
-        return {
-          minX: shape.data.x || 0,
-          maxX: (shape.data.x || 0) + (shape.data.width || 100),
-          minY: shape.data.y || 0,
-          maxY: (shape.data.y || 0) + (shape.data.height || 30),
-        };
-      case 'polyline': {
-        const pts = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        const xs = pts.map(([x]) => x);
-        const ys = pts.map(([, y]) => y);
-        return {
-          minX: Math.min(...xs),
-          maxX: Math.max(...xs),
-          minY: Math.min(...ys),
-          maxY: Math.max(...ys),
-        };
-      }
-      case 'line':
-      case 'connector':
-        return {
-          minX: Math.min(shape.data.x1 || 0, shape.data.x2 || 0),
-          maxX: Math.max(shape.data.x1 || 0, shape.data.x2 || 0),
-          minY: Math.min(shape.data.y1 || 0, shape.data.y2 || 0),
-          maxY: Math.max(shape.data.y1 || 0, shape.data.y2 || 0),
-        };
-      default:
-        return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
-    }
-  }, []);
+    const def = getDef(shape);
+    if (def?.getBounds) return def.getBounds(shape);
+    return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+  }, [getDef]);
 
   const getBounds = useCallback((shape: SVGShape) => {
     const b = getShapeBounds(shape);
@@ -831,61 +666,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
   // 更新图形位置
   const updateShapePosition = useCallback((shape: SVGShape, dx: number, dy: number) => {
-    switch (shape.type) {
-      case 'rect':
-        const newX = (shape.data.x || 0) + dx;
-        const newY = (shape.data.y || 0) + dy;
-        shape.element.setAttribute('x', String(newX));
-        shape.element.setAttribute('y', String(newY));
-        shape.data.x = newX;
-        shape.data.y = newY;
-        break;
-      case 'circle':
-        const newCx = (shape.data.x || 0) + dx;
-        const newCy = (shape.data.y || 0) + dy;
-        shape.element.setAttribute('cx', String(newCx));
-        shape.element.setAttribute('cy', String(newCy));
-        shape.data.x = newCx;
-        shape.data.y = newCy;
-        break;
-      case 'triangle':
-        const points = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        const newPoints = points.map(([x, y]) => `${x + dx},${y + dy}`).join(' ');
-        shape.element.setAttribute('points', newPoints);
-        shape.data.points = newPoints;
-        break;
-      case 'text':
-        const newTextX = (shape.data.x || 0) + dx;
-        const newTextY = (shape.data.y || 0) + dy;
-        shape.element.setAttribute('x', String(newTextX));
-        shape.element.setAttribute('y', String(newTextY));
-        shape.data.x = newTextX;
-        shape.data.y = newTextY;
-        break;
-      case 'line':
-      case 'connector': {
-        const newX1 = (shape.data.x1 || 0) + dx;
-        const newY1 = (shape.data.y1 || 0) + dy;
-        const newX2 = (shape.data.x2 || 0) + dx;
-        const newY2 = (shape.data.y2 || 0) + dy;
-        shape.element.setAttribute('x1', String(newX1));
-        shape.element.setAttribute('y1', String(newY1));
-        shape.element.setAttribute('x2', String(newX2));
-        shape.element.setAttribute('y2', String(newY2));
-        shape.data.x1 = newX1;
-        shape.data.y1 = newY1;
-        shape.data.x2 = newX2;
-        shape.data.y2 = newY2;
-        break;
-      }
-      case 'polyline': {
-        const polyPoints = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        const shiftedPoints = polyPoints.map(([px, py]) => `${px + dx},${py + dy}`).join(' ');
-        shape.element.setAttribute('points', shiftedPoints);
-        shape.data.points = shiftedPoints;
-        break;
-      }
-    }
+    const def = getDef(shape);
+    if (def?.move) def.move(shape, dx, dy);
 
     refreshPortsPosition(shape);
     applyTransform(shape);
@@ -951,132 +733,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
   // 更新图形大小
   const updateShapeSize = useCallback((shape: SVGShape, handle: string, dx: number, dy: number) => {
-    switch (shape.type) {
-      case 'rect':
-        let newX = shape.data.x || 0;
-        let newY = shape.data.y || 0;
-        let newWidth = shape.data.width || 0;
-        let newHeight = shape.data.height || 0;
-
-        switch (handle) {
-          case 'se':
-            newWidth = Math.max(20, newWidth + dx);
-            newHeight = Math.max(20, newHeight + dy);
-            break;
-          case 'sw':
-            newX = Math.min(newX + newWidth - 20, newX + dx);
-            newWidth = Math.max(20, newWidth - dx);
-            newHeight = Math.max(20, newHeight + dy);
-            break;
-          case 'ne':
-            newY = Math.min(newY + newHeight - 20, newY + dy);
-            newWidth = Math.max(20, newWidth + dx);
-            newHeight = Math.max(20, newHeight - dy);
-            break;
-          case 'nw':
-            newX = Math.min(newX + newWidth - 20, newX + dx);
-            newY = Math.min(newY + newHeight - 20, newY + dy);
-            newWidth = Math.max(20, newWidth - dx);
-            newHeight = Math.max(20, newHeight - dy);
-            break;
-          case 'n':
-            newY = Math.min(newY + newHeight - 20, newY + dy);
-            newHeight = Math.max(20, newHeight - dy);
-            break;
-          case 's':
-            newHeight = Math.max(20, newHeight + dy);
-            break;
-          case 'e':
-            newWidth = Math.max(20, newWidth + dx);
-            break;
-          case 'w':
-            newX = Math.min(newX + newWidth - 20, newX + dx);
-            newWidth = Math.max(20, newWidth - dx);
-            break;
-        }
-
-        shape.element.setAttribute('x', String(newX));
-        shape.element.setAttribute('y', String(newY));
-        shape.element.setAttribute('width', String(newWidth));
-        shape.element.setAttribute('height', String(newHeight));
-        
-        shape.data.x = newX;
-        shape.data.y = newY;
-        shape.data.width = newWidth;
-        shape.data.height = newHeight;
-        break;
-
-      case 'circle':
-        const centerX = shape.data.x || 0;
-        const centerY = shape.data.y || 0;
-        const radius = shape.data.radius || 0;
-        
-        // 根据拖动方向调整半径
-        const deltaX = handle.includes('e') ? dx : handle.includes('w') ? -dx : 0;
-        const deltaY = handle.includes('s') ? dy : handle.includes('n') ? -dy : 0;
-        const avgDelta = (deltaX + deltaY) / 2;
-        const newRadius = Math.max(10, radius + avgDelta);
-        
-        shape.element.setAttribute('r', String(newRadius));
-        shape.data.radius = newRadius;
-        break;
-      case 'triangle': {
-        const pts = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
-        if (pts.length === 0) break;
-        const xs = pts.map(([px]) => px);
-        const ys = pts.map(([, py]) => py);
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-        const width = maxX - minX || 1;
-        const height = maxY - minY || 1;
-
-        const anchor = {
-          x: handle.includes('w') ? maxX : minX,
-          y: handle.includes('n') ? maxY : minY,
-        };
-
-        const widthDelta = handle.includes('e') ? dx : -dx;
-        const heightDelta = handle.includes('s') ? dy : -dy;
-        const newWidth = Math.max(20, width + widthDelta);
-        const newHeight = Math.max(20, height + heightDelta);
-        const scaleX = newWidth / width;
-        const scaleY = newHeight / height;
-
-        const scaled = pts.map(([px, py]) => {
-          const nx = anchor.x + (px - anchor.x) * scaleX;
-          const ny = anchor.y + (py - anchor.y) * scaleY;
-          return [nx, ny] as [number, number];
-        });
-        const newPointsStr = scaled.map(([px, py]) => `${px},${py}`).join(' ');
-        shape.element.setAttribute('points', newPointsStr);
-        shape.data.points = newPointsStr;
-        break;
-      }
-      case 'text': {
-        const currentW = shape.data.width || Number(shape.element.getAttribute('width')) || 100;
-        const currentH = shape.data.height || Number(shape.element.getAttribute('height')) || 30;
-        let newW = currentW;
-        let newH = currentH;
-        if (handle.includes('e')) newW = Math.max(30, currentW + dx);
-        if (handle.includes('w')) newW = Math.max(30, currentW - dx);
-        if (handle.includes('s')) newH = Math.max(20, currentH + dy);
-        if (handle.includes('n')) newH = Math.max(20, currentH - dy);
-        shape.element.setAttribute('width', String(newW));
-        shape.element.setAttribute('height', String(newH));
-        if (shape.element instanceof SVGForeignObjectElement) {
-          const div = shape.element.firstChild as HTMLElement | null;
-          if (div) {
-            div.style.width = '100%';
-            div.style.height = '100%';
-          }
-        }
-        shape.data.width = newW;
-        shape.data.height = newH;
-        break;
-      }
-    }
+    const def = getDef(shape);
+    if (def?.resize) def.resize(shape, handle, dx, dy);
     refreshPortsPosition(shape);
     applyTransform(shape);
     if (shape.connections) {
