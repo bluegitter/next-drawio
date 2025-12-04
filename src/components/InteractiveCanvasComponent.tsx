@@ -114,6 +114,22 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const [connectionStartPort, setConnectionStartPort] = useState<string | null>(null);
   const connectorHandleRef = useRef<Map<string, { start: SVGCircleElement; end: SVGCircleElement }>>(new Map());
   const skipNextCanvasClickClear = useRef(false);
+  const [editingText, setEditingText] = useState<{
+    id: string;
+    value: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    fontSize: number;
+    fontFamily?: string;
+    fontWeight?: string;
+    fontStyle?: string;
+    letterSpacing?: string;
+    lineHeight?: string;
+    color?: string;
+  } | null>(null);
+  const editingInputRef = useRef<HTMLInputElement | null>(null);
   const [draggingHandle, setDraggingHandle] = useState<{
     connectorId: string;
     end: 'start' | 'end';
@@ -204,7 +220,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         const centerY = points.reduce((sum, p) => sum + p[1], 0) / points.length;
         return { x: centerX, y: centerY };
       case 'text':
-        return { x: shape.data.x || 0, y: shape.data.y || 0 };
+        return { x: (shape.data.x || 0) + (shape.data.width || 0) / 2, y: (shape.data.y || 0) + (shape.data.height || 0) / 2 };
       case 'line':
       case 'connector': {
         const x1 = shape.data.x1 || 0;
@@ -360,7 +376,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         };
       }
       case 'text':
-        if (shape.element instanceof SVGTextElement) {
+        if (shape.element instanceof SVGForeignObjectElement) {
           const bbox = shape.element.getBBox();
           return {
             minX: bbox.x,
@@ -371,9 +387,9 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         }
         return {
           minX: shape.data.x || 0,
-          maxX: (shape.data.x || 0) + 100,
-          minY: (shape.data.y || 0) - 20,
-          maxY: (shape.data.y || 0) + 20,
+          maxX: (shape.data.x || 0) + (shape.data.width || 100),
+          minY: shape.data.y || 0,
+          maxY: (shape.data.y || 0) + (shape.data.height || 30),
         };
       case 'polyline': {
         const pts = shape.data.points?.split(' ').map(p => p.split(',').map(Number)) || [];
@@ -431,6 +447,44 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     portEl.setAttribute('stroke-width', '2.5');
     portEl.setAttribute('r', '7');
   }, []);
+
+  // 开始文本内联编辑
+  const beginEditText = useCallback((shape: SVGShape) => {
+    if (!svgRef.current || shape.type !== 'text') return;
+    const svgBox = svgRef.current.getBoundingClientRect();
+    const rectBox = shape.element.getBoundingClientRect();
+    const padding = 1.5;
+    const width = Math.max(rectBox.width + padding * 2, 60);
+    const height = Math.max(rectBox.height + padding * 2, rectBox.height || 20);
+    setSelectedShape(shape.id);
+    const cs = window.getComputedStyle(shape.element);
+    const fontSize = Number(shape.element.getAttribute('font-size')) || parseFloat(cs.fontSize) || shape.data.fontSize || 20;
+    const fontFamily = shape.element.getAttribute('font-family') || (shape.data as any).fontFamily || cs.fontFamily;
+    const fontWeight = shape.element.getAttribute('font-weight') || (shape.data as any).fontWeight || cs.fontWeight;
+    const fontStyle = shape.element.getAttribute('font-style') || cs.fontStyle;
+    const letterSpacing = cs.letterSpacing;
+    const lineHeight = cs.lineHeight;
+    const color = shape.element.getAttribute('fill') || shape.data.fill || cs.fill;
+    // 隐藏原文本，避免编辑时重影
+    (shape.element as any).dataset.prevOpacity = shape.element.style.opacity;
+    shape.element.style.opacity = '0';
+    setEditingText({
+      id: shape.id,
+      value: shape.data.text || shape.element.textContent || '',
+      x: rectBox.left - svgBox.left - padding,
+      y: rectBox.top - svgBox.top - padding,
+      width,
+      height,
+      fontSize,
+      fontFamily: fontFamily || 'Arial, sans-serif',
+      fontWeight: fontWeight || 'normal',
+      fontStyle: fontStyle || 'normal',
+      letterSpacing,
+      lineHeight,
+      color: color || '#000000',
+    });
+    setTimeout(() => editingInputRef.current?.focus(), 0);
+  }, [setSelectedShape]);
 
   const findNearestPortElement = useCallback((x: number, y: number, maxDistance = 14) => {
     let nearest: { el: SVGElement; dist: number } | null = null;
@@ -821,7 +875,12 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const updateTextContent = useCallback((shape: SVGShape, content: string) => {
     if (shape.type !== 'text') return;
     const safeText = content || shape.data.text || '';
-    shape.element.textContent = safeText;
+    if (shape.element instanceof SVGForeignObjectElement) {
+      const div = shape.element.firstChild as HTMLElement | null;
+      if (div) div.textContent = safeText;
+    } else {
+      shape.element.textContent = safeText;
+    }
     shape.data.text = safeText;
     refreshResizeHandles(shape);
     showTextSelection(shape);
@@ -835,6 +894,32 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     }
     saveToHistory(shapes, selectedIds);
   }, [refreshResizeHandles, saveToHistory, selectedIds, shapes, showTextSelection, updateConnectionLine]);
+
+  const commitEditingText = useCallback((apply: boolean) => {
+    if (!editingText) return;
+    const { id, value } = editingText;
+    if (apply) {
+      const shape = shapes.find(s => s.id === id);
+      if (shape) {
+        updateTextContent(shape, value);
+      }
+    }
+    const shape = shapes.find(s => s.id === id);
+    if (shape) {
+      const prev = (shape.element as any).dataset?.prevOpacity;
+      shape.element.style.opacity = prev ?? '';
+      if ((shape.element as any).dataset) delete (shape.element as any).dataset.prevOpacity;
+    }
+    setEditingText(null);
+  }, [editingText, shapes, updateTextContent]);
+
+  useEffect(() => {
+    if (!editingText) return;
+    const exists = shapes.some(s => s.id === editingText.id);
+    if (!exists) {
+      setEditingText(null);
+    }
+  }, [editingText, shapes]);
 
   // 更新图形大小
   const updateShapeSize = useCallback((shape: SVGShape, handle: string, dx: number, dy: number) => {
@@ -939,6 +1024,48 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         const newPointsStr = scaled.map(([px, py]) => `${px},${py}`).join(' ');
         shape.element.setAttribute('points', newPointsStr);
         shape.data.points = newPointsStr;
+        break;
+      }
+      case 'text': {
+        const currentW = shape.data.width || Number(shape.element.getAttribute('width')) || 100;
+        const currentH = shape.data.height || Number(shape.element.getAttribute('height')) || 30;
+        const currentX = shape.data.x || Number(shape.element.getAttribute('x')) || 0;
+        const currentY = shape.data.y || Number(shape.element.getAttribute('y')) || 0;
+        let newX = currentX;
+        let newY = currentY;
+        let newW = currentW;
+        let newH = currentH;
+
+        if (handle.includes('e')) {
+          newW = Math.max(30, currentW + dx);
+        }
+        if (handle.includes('s')) {
+          newH = Math.max(20, currentH + dy);
+        }
+        if (handle.includes('w')) {
+          newX = currentX + dx;
+          newW = Math.max(30, currentW - dx);
+        }
+        if (handle.includes('n')) {
+          newY = currentY + dy;
+          newH = Math.max(20, currentH - dy);
+        }
+
+        shape.element.setAttribute('x', String(newX));
+        shape.element.setAttribute('y', String(newY));
+        shape.element.setAttribute('width', String(newW));
+        shape.element.setAttribute('height', String(newH));
+        if (shape.element instanceof SVGForeignObjectElement) {
+          const div = shape.element.firstChild as HTMLElement | null;
+          if (div) {
+            div.style.width = '100%';
+            div.style.height = '100%';
+          }
+        }
+        shape.data.x = newX;
+        shape.data.y = newY;
+        shape.data.width = newW;
+        shape.data.height = newH;
         break;
       }
     }
@@ -1254,31 +1381,46 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const addText = useCallback(() => {
     if (!svgRef.current) return;
 
-    const text = createSVGElement('text');
-    if (!text) return;
+    const foreign = createSVGElement('foreignObject');
+    if (!foreign) return;
 
     const id = generateId();
     const x = 100 + Math.random() * 100;
     const y = 250 + Math.random() * 50;
+    const width = 200;
+    const height = 60;
     
-    text.setAttribute('id', id);
-    text.setAttribute('x', String(x));
-    text.setAttribute('y', String(y));
-    text.setAttribute('font-size', '20');
-    text.setAttribute('fill', '#1f2937');
-    text.setAttribute('font-family', 'Arial, sans-serif');
-    text.setAttribute('cursor', 'move');
+    foreign.setAttribute('id', id);
+    foreign.setAttribute('x', String(x));
+    foreign.setAttribute('y', String(y));
+    foreign.setAttribute('width', String(width));
+    foreign.setAttribute('height', String(height));
+    foreign.setAttribute('cursor', 'move');
 
-    text.textContent = '点击编辑文字';
+    const div = document.createElement('div');
+    div.textContent = '点击编辑文字';
+    div.style.width = '100%';
+    div.style.height = '100%';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.wordBreak = 'break-word';
+    div.style.fontSize = '20px';
+    div.style.fontFamily = 'Arial, sans-serif';
+    div.style.fontWeight = '400';
+    div.style.color = '#1f2937';
+    div.style.lineHeight = '1.2';
+
+    foreign.appendChild(div);
 
     const newShape: SVGShape = {
       id,
       type: 'text',
-      element: text,
+      element: foreign,
       data: {
         x,
         y,
-        text: text.textContent || '点击编辑文字',
+        width,
+        height,
+        text: div.textContent || '点击编辑文字',
         fill: '#1f2937',
         stroke: 'none',
         strokeWidth: 0,
@@ -1289,14 +1431,14 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       connections: [],
     };
 
-    svgRef.current.appendChild(text);
+    svgRef.current.appendChild(foreign);
     setShapes(prev => {
       const updated = [...prev, newShape];
       saveToHistory(updated, id);
       return updated;
     });
     setSelectedShape(id);
-    onShapeSelect?.(text);
+    onShapeSelect?.(foreign);
   }, [createSVGElement, generateId, onShapeSelect, saveToHistory]);
 
   // 连接图形
@@ -2145,11 +2287,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       const handleDblClick = (e: MouseEvent) => {
         if (shape.type === 'text') {
           e.stopPropagation();
-          const current = (shape.element as SVGTextElement).textContent || '';
-          const next = window.prompt('编辑文字', current);
-          if (next !== null) {
-            updateTextContent(shape, next);
-          }
+          beginEditText(shape);
         }
       };
       const handleMouseEnter = () => {
@@ -2217,7 +2355,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     return () => {
       cleanups.forEach(clean => clean());
     };
-  }, [draggingHandle, handleShapeMouseDown, hideConnectorHandles, hidePorts, hideResizeHandles, isConnecting, selectedIds, shapes, showConnectorHandles, showPorts, showResizeHandles, showTextSelection, hideTextSelection, updateTextContent]);
+  }, [draggingHandle, handleShapeMouseDown, hideConnectorHandles, hidePorts, hideResizeHandles, isConnecting, selectedIds, shapes, showConnectorHandles, showPorts, showResizeHandles, showTextSelection, hideTextSelection, beginEditText, updateTextContent]);
 
   // 画布点击事件（取消选择）
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
@@ -2385,6 +2523,42 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         onMouseUp={handleMouseUp}
         onClick={handleCanvasClick}
       />
+      {editingText && (
+        <input
+          ref={editingInputRef}
+          className="absolute outline-none bg-transparent"
+          style={{
+            left: editingText.x,
+            top: editingText.y,
+            width: editingText.width,
+            height: editingText.height,
+            padding: 0,
+            margin: 0,
+            border: 'none',
+            boxShadow: 'none',
+            fontSize: editingText.fontSize,
+            fontFamily: editingText.fontFamily,
+            fontWeight: editingText.fontWeight,
+            fontStyle: editingText.fontStyle,
+            letterSpacing: editingText.letterSpacing,
+            lineHeight: editingText.lineHeight || `${editingText.fontSize}px`,
+            color: editingText.color,
+          }}
+          value={editingText.value}
+          onChange={e => setEditingText(prev => (prev ? { ...prev, value: e.target.value } : prev))}
+          onBlur={() => commitEditingText(true)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commitEditingText(true);
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              commitEditingText(false);
+            }
+          }}
+          onMouseDown={e => e.stopPropagation()}
+        />
+      )}
       {selectionRect && (
         <div
           className="absolute border-2 border-blue-400 border-dashed bg-blue-200/20 pointer-events-none"
