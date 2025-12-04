@@ -86,35 +86,39 @@ export const ConnectionDemo: React.FC<ConnectionDemoProps> = ({ width, height })
       
       if (!connectingFrom) {
         // 开始连接
-        setConnectingFrom(shapeId);
-        setIsConnecting(true);
-        canvasRef.current?.startConnection(shapeId);
+        if (shapeId) {
+          setConnectingFrom(shapeId);
+          setIsConnecting(true);
+          canvasRef.current?.startConnection(shapeId);
+        }
       } else if (shapeId !== connectingFrom) {
         // 完成连接
         try {
-          const pointGenerator = new DefaultConnectionPointGenerator();
-          const fromCenter = pointGenerator.getPointPosition('rect', { x: 100, y: 100 }, 'center');
-          const toCenter = pointGenerator.getPointPosition('circle', { x: 200, y: 150 }, 'center');
-          
-          const fromPoint = {
-            id: `point-${connectingFrom}-center`,
-            type: 'center' as const,
-            position: fromCenter,
-            offset: { x: 0, y: 0 },
-            visible: true,
-            highlighted: false
-          };
-          
-          const toPoint = {
-            id: `point-${shapeId}-center`,
-            type: 'center' as const,
-            position: toCenter,
-            offset: { x: 0, y: 0 },
-            visible: true,
-            highlighted: false
-          };
-
-          connectionManager.createConnection(connectingFrom, shapeId, fromPoint, toPoint);
+          if (connectingFrom && shapeId) {
+            const pointGenerator = new DefaultConnectionPointGenerator();
+            const fromCenter = pointGenerator.getPointPosition('rect', { x: 100, y: 100 }, 'center');
+            const toCenter = pointGenerator.getPointPosition('circle', { x: 200, y: 150 }, 'center');
+            
+            const fromPoint = {
+              id: `point-${connectingFrom}-center`,
+              type: 'center' as const,
+              position: fromCenter,
+              offset: { x: 0, y: 0 },
+              visible: true,
+              highlighted: false
+            };
+            
+            const toPoint = {
+              id: `point-${shapeId}-center`,
+              type: 'center' as const,
+              position: toCenter,
+              offset: { x: 0, y: 0 },
+              visible: true,
+              highlighted: false
+            };
+            
+            connectionManager.createConnection(connectingFrom, shapeId, fromPoint, toPoint);
+          }
         } catch (error) {
           console.error('创建连接失败:', error);
         }

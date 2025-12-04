@@ -152,7 +152,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
     const activeObjects = fabricCanvasRef.current.getActiveObjects();
     if (activeObjects.length > 0) {
-      activeObjects.forEach(obj => {
+      activeObjects.forEach((obj: fabric.Object) => {
         fabricCanvasRef.current?.remove(obj);
       });
       fabricCanvasRef.current.discardActiveObject();

@@ -9,6 +9,7 @@ interface CanvasProviderProps {
   backgroundColor?: string;
   onCanvasReady?: (canvas: fabric.Canvas) => void;
   onCanvasError?: (error: Error) => void;
+  onError?: (error: Error) => void; // 兼容旧命名
 }
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
@@ -19,6 +20,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
   height = 600,
   backgroundColor = '#ffffff',
   onCanvasReady,
+  onCanvasError,
   onError,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -52,17 +54,13 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
       // 配置选择
       fabricCanvas.selectionLineWidth = 2;
       fabricCanvas.selectionBorderColor = '#007acc';
-      fabricCanvas.selectionCornerColor = '#3b82f6';
-      fabricCanvas.selectionCornerSize = 8;
+      // fabric v6 移除了 selectionCornerColor/selectionCornerSize，控制点样式由 controls 决定
       fabricCanvas.selectionFullyContained = false;
 
-      // 配置变换控制点
-      fabricCanvas.cornerStyle = 'circle';
-      fabricCanvas.cornerStrokeColor = '#ffffff';
-      fabricCanvas.cornerFillColor = '#3b82f6';
-      fabricCanvas.transparentCorners = false;
-      fabricCanvas.borderColor = '#007acc';
-      fabricCanvas.borderScaleFactor = 1;
+      // 配置变换控制点（v6 需自定义 controls，这里使用宽松设置避免类型冲突）
+      (fabricCanvas as any).transparentCorners = false;
+      (fabricCanvas as any).borderColor = '#007acc';
+      (fabricCanvas as any).borderScaleFactor = 1;
 
       fabricCanvasRef.current = fabricCanvas;
       setIsLoading(false);
@@ -72,9 +70,10 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
       const error = err instanceof Error ? err : new Error('Failed to initialize canvas');
       setError(error);
       setIsLoading(false);
+      onCanvasError?.(error);
       onError?.(error);
     }
-  }, [width, height, backgroundColor, onCanvasReady, onError]);
+  }, [width, height, backgroundColor, onCanvasReady, onCanvasError, onError]);
 
   // 清理 Canvas
   const disposeCanvas = useCallback(() => {
@@ -176,13 +175,13 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
     if (fabricCanvasRef.current) {
       switch (format) {
         case 'png':
-          return fabricCanvasRef.current.toDataURL('png');
+          return fabricCanvasRef.current.toDataURL({ format: 'png' });
         case 'jpg':
-          return fabricCanvasRef.current.toDataURL('jpeg', 0.8);
+          return fabricCanvasRef.current.toDataURL({ format: 'jpeg', quality: 0.8 });
         case 'svg':
           return fabricCanvasRef.current.toSVG();
         default:
-          return fabricCanvasRef.current.toDataURL('png');
+          return fabricCanvasRef.current.toDataURL({ format: 'png' });
       }
     }
     return '';

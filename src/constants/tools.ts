@@ -231,7 +231,7 @@ export const TOOL_DEFAULTS = {
   SQUARE_MODE: false,
   
   // 圆形工具
-  FROM_CENTER: true,
+  CIRCLE_FROM_CENTER: true,
   CONSTRAIN_TO_CIRCLE: false,
   
   // 钢笔工具

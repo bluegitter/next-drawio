@@ -4,7 +4,6 @@ import {
   ConnectionData, 
   ConnectionConfig,
   ConnectionManager as IConnectionManager,
-  ConnectionEvent,
   ConnectionEventMap 
 } from '@/types/connection';
 import { ConnectionRenderer, ConnectionPathCalculator, DefaultConnectionPointGenerator } from './renderer';

@@ -205,7 +205,7 @@ export class ConnectionRenderer {
   /**
    * 生成箭头标记
    */
-  generateArrowMarker(id: string, style: ConnectionEndStyle): string {
+  generateArrowMarker(id: string, style: ConnectionEndStyle, stroke: string = '#6b7280'): string {
     const markerId = `arrow-${id}-${style}`;
     
     switch (style) {
@@ -214,7 +214,7 @@ export class ConnectionRenderer {
           <defs>
             <marker id="${markerId}" markerWidth="10" markerHeight="10" 
                     refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L0,6 L9,3 z" fill="${connection.stroke}" />
+              <path d="M0,0 L0,6 L9,3 z" fill="${stroke}" />
             </marker>
           </defs>
         `;
@@ -224,7 +224,7 @@ export class ConnectionRenderer {
           <defs>
             <marker id="${markerId}" markerWidth="10" markerHeight="10" 
                     refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L0,6 L9,3 z" fill="${connection.stroke}" />
+              <path d="M0,0 L0,6 L9,3 z" fill="${stroke}" />
             </marker>
           </defs>
         `;
@@ -234,7 +234,7 @@ export class ConnectionRenderer {
           <defs>
             <marker id="${markerId}" markerWidth="8" markerHeight="8" 
                     refX="4" refY="4" orient="auto" markerUnits="strokeWidth">
-              <circle cx="4" cy="4" r="3" fill="white" stroke="${connection.stroke}" stroke-width="1" />
+              <circle cx="4" cy="4" r="3" fill="white" stroke="${stroke}" stroke-width="1" />
             </marker>
           </defs>
         `;
@@ -246,8 +246,8 @@ export class ConnectionRenderer {
             <marker id="${markerId}" markerWidth="10" markerHeight="10" 
                     refX="5" refY="5" orient="auto" markerUnits="strokeWidth">
               <path d="M0,5 L5,0 L10,5 L5,10 z" 
-                    fill="${style === 'filled-diamond' ? connection.stroke : 'white'}" 
-                    stroke="${connection.stroke}" stroke-width="1" />
+                    fill="${style === 'filled-diamond' ? stroke : 'white'}" 
+                    stroke="${stroke}" stroke-width="1" />
             </marker>
           </defs>
         `;
@@ -266,10 +266,10 @@ export class ConnectionRenderer {
     
     let markers = '';
     if (connection.startStyle !== 'none') {
-      markers += this.generateArrowMarker(`start-${connection.id}`, connection.startStyle);
+      markers += this.generateArrowMarker(`start-${connection.id}`, connection.startStyle, connection.stroke);
     }
     if (connection.endStyle !== 'none') {
-      markers += this.generateArrowMarker(`end-${connection.id}`, connection.endStyle);
+      markers += this.generateArrowMarker(`end-${connection.id}`, connection.endStyle, connection.stroke);
     }
 
     const markerStart = connection.startStyle !== 'none' ? `url(#arrow-start-${connection.id}-${connection.startStyle})` : '';

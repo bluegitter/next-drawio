@@ -1,5 +1,24 @@
 // 颜色常量
-export const COLORS = {
+export const COLORS: {
+  WHITE: string;
+  BLACK: string;
+  TRANSPARENT: string;
+  GRAY_50: string; GRAY_100: string; GRAY_200: string; GRAY_300: string; GRAY_400: string;
+  GRAY_500: string; GRAY_600: string; GRAY_700: string; GRAY_800: string; GRAY_900: string; GRAY_950: string;
+  PRIMARY: Record<number, string>;
+  SECONDARY: Record<number, string>;
+  SUCCESS: Record<number, string>;
+  WARNING: Record<number, string>;
+  ERROR: Record<number, string>;
+  INFO: Record<number, string>;
+  TEXT: { PRIMARY: string; SECONDARY: string; DISABLED: string; INVERSE: string };
+  BACKGROUND: { PRIMARY: string; SECONDARY: string; INVERSE: string; MUTED: string };
+  CANVAS: Record<string, string>;
+  TOOLBAR: Record<string, string>;
+  PANEL: Record<string, string>;
+  STATUS_BAR: Record<string, string>;
+  DARK: Record<string, any>;
+} = {
   // 基础颜色
   WHITE: '#ffffff',
   BLACK: '#000000',
@@ -107,62 +126,76 @@ export const COLORS = {
     900: '#1e3a8a',
     950: '#172554',
   },
+
+  // 文本与背景
+  TEXT: {
+    PRIMARY: '#111827',
+    SECONDARY: '#4b5563',
+    DISABLED: '#9ca3af',
+    INVERSE: '#f9fafb',
+  },
+  BACKGROUND: {
+    PRIMARY: '#ffffff',
+    SECONDARY: '#f8fafc',
+    INVERSE: '#111827',
+    MUTED: '#f3f4f6',
+  },
   
   // 画布特定颜色
   CANVAS: {
-    BACKGROUND: COLORS.WHITE,
-    GRID: COLORS.GRAY_200,
-    GRID_MAJOR: COLORS.GRAY_400,
-    RULER: COLORS.GRAY_700,
-    RULER_TEXT: COLORS.GRAY_600,
+    BACKGROUND: '#ffffff',
+    GRID: '#e5e5e5',
+    GRID_MAJOR: '#a3a3a3',
+    RULER: '#404040',
+    RULER_TEXT: '#525252',
     SELECTION: '#007acc',
-    SELECTION_HANDLE: COLORS.PRIMARY[500],
-    SELECTION_HANDLE_ACTIVE: COLORS.PRIMARY[700],
-    BOUNDING_BOX: COLORS.GRAY_500,
-    GUIDE: COLORS.ERROR[500],
-    GUIDE_LOCKED: COLORS.WARNING[500],
-    SNAP_LINE: COLORS.SUCCESS[500],
-    ROTATION_HANDLE: COLORS.SECONDARY[500],
-    ORIGIN: COLORS.ERROR[500],
-    AXIS_X: COLORS.ERROR[500],
-    AXIS_Y: COLORS.SUCCESS[500],
+    SELECTION_HANDLE: '#3b82f6',
+    SELECTION_HANDLE_ACTIVE: '#1d4ed8',
+    BOUNDING_BOX: '#737373',
+    GUIDE: '#ef4444',
+    GUIDE_LOCKED: '#f59e0b',
+    SNAP_LINE: '#22c55e',
+    ROTATION_HANDLE: '#475569',
+    ORIGIN: '#ef4444',
+    AXIS_X: '#ef4444',
+    AXIS_Y: '#22c55e',
   },
   
   // 工具栏颜色
   TOOLBAR: {
-    BACKGROUND: COLORS.GRAY_50,
-    BORDER: COLORS.GRAY_200,
-    TOOL_ACTIVE: COLORS.PRIMARY[500],
-    TOOL_HOVER: COLORS.GRAY_200,
-    TOOL_SELECTED: COLORS.PRIMARY[100],
-    ICON: COLORS.GRAY_700,
-    ICON_DISABLED: COLORS.GRAY_400,
+    BACKGROUND: '#fafafa',
+    BORDER: '#e5e5e5',
+    TOOL_ACTIVE: '#3b82f6',
+    TOOL_HOVER: '#e5e5e5',
+    TOOL_SELECTED: '#dbeafe',
+    ICON: '#404040',
+    ICON_DISABLED: '#a3a3a3',
   },
   
   // 面板颜色
   PANEL: {
-    BACKGROUND: COLORS.WHITE,
-    HEADER: COLORS.GRAY_50,
-    BORDER: COLORS.GRAY_200,
-    TEXT_PRIMARY: COLORS.GRAY_900,
-    TEXT_SECONDARY: COLORS.GRAY_600,
-    LABEL: COLORS.GRAY_700,
-    INPUT: COLORS.WHITE,
-    INPUT_BORDER: COLORS.GRAY_300,
-    INPUT_FOCUS: COLORS.PRIMARY[500],
-    BUTTON_PRIMARY: COLORS.PRIMARY[500],
-    BUTTON_SECONDARY: COLORS.SECONDARY[500],
+    BACKGROUND: '#ffffff',
+    HEADER: '#f5f5f5',
+    BORDER: '#e5e5e5',
+    TEXT_PRIMARY: '#111827',
+    TEXT_SECONDARY: '#4b5563',
+    LABEL: '#374151',
+    INPUT: '#ffffff',
+    INPUT_BORDER: '#d1d5db',
+    INPUT_FOCUS: '#3b82f6',
+    BUTTON_PRIMARY: '#3b82f6',
+    BUTTON_SECONDARY: '#475569',
   },
   
   // 状态栏颜色
   STATUS_BAR: {
-    BACKGROUND: COLORS.GRAY_800,
-    TEXT: COLORS.GRAY_300,
-    BORDER: COLORS.GRAY_700,
-    INFO: COLORS.INFO[400],
-    WARNING: COLORS.WARNING[400],
-    ERROR: COLORS.ERROR[400],
-    SUCCESS: COLORS.SUCCESS[400],
+    BACKGROUND: '#1f2937',
+    TEXT: '#d1d5db',
+    BORDER: '#111827',
+    INFO: '#60a5fa',
+    WARNING: '#f59e0b',
+    ERROR: '#ef4444',
+    SUCCESS: '#22c55e',
   },
   
   // 暗色主题

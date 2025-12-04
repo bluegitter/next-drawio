@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { shapeRegistry } from '../shapes';
 import type { ShapeDefinition } from '../shapes/types';
 
@@ -60,6 +60,11 @@ interface SVGShape {
     x2?: number;
     y2?: number;
     text?: string;
+    fontSize?: number;
+    fontFamily?: string;
+    fontWeight?: string | number;
+    letterSpacing?: string;
+    lineHeight?: string;
     startPortId?: string | null;
     endPortId?: string | null;
     fill: string;
@@ -85,7 +90,7 @@ interface HistoryState {
   selectedIds: string[];
 }
 
-export const CanvasComponent: React.FC<CanvasComponentProps> = ({
+export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentProps>(({
   width,
   height,
   backgroundColor = '#ffffff',
@@ -94,7 +99,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   onShapeSelect,
   onCanvasChange,
   autoResize = false,
-}) => {
+}, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [shapes, setShapes] = useState<SVGShape[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -327,17 +332,17 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
   const findNearestPortElement = useCallback((x: number, y: number, maxDistance = 14) => {
     let nearest: { el: SVGElement; dist: number } | null = null;
-    portElementsRef.current.forEach(portList => {
-      portList.forEach(port => {
+    for (const portList of portElementsRef.current.values()) {
+      for (const port of portList) {
         const cx = Number(port.getAttribute('cx'));
         const cy = Number(port.getAttribute('cy'));
         const dist = Math.hypot(cx - x, cy - y);
         if (dist <= maxDistance && (!nearest || dist < nearest.dist)) {
           nearest = { el: port, dist };
         }
-      });
-    });
-    return nearest?.el ?? null;
+      }
+    }
+    return nearest ? nearest.el : null;
   }, []);
 
   const hideResizeHandles = useCallback((shapeId?: string) => {
@@ -452,9 +457,9 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const showTextSelection = useCallback((shape: SVGShape) => {
     if (!svgRef.current || shape.type !== 'text') return;
     hideTextSelection(shape.id);
-    const bbox = shape.element.getBBox();
+    const bbox = (shape.element as SVGGraphicsElement).getBBox();
     const padding = 2;
-    const rect = createSVGElement('rect');
+    const rect = createSVGElement('rect') as SVGRectElement | null;
     if (!rect) return;
     rect.setAttribute('x', String(bbox.x - padding));
     rect.setAttribute('y', String(bbox.y - padding));
@@ -468,7 +473,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     rect.setAttribute('pointer-events', 'none');
     rect.setAttribute('data-text-selection', shape.id);
     svgRef.current.appendChild(rect);
-    textSelectionRef.current.set(shape.id, rect);
+    textSelectionRef.current.set(shape.id, rect as SVGRectElement);
   }, [createSVGElement, hideTextSelection]);
 
   // 开始连接（依赖于端口坐标计算，因此放在端口渲染之前）
@@ -578,7 +583,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     if (connector.type !== 'connector' && connector.type !== 'line') return;
     hideConnectorHandles(connector.id);
     const createHandle = (x: number, y: number, end: 'start' | 'end') => {
-      const c = createSVGElement('circle');
+      const c = createSVGElement('circle') as SVGCircleElement | null;
       if (!c) return null;
       c.setAttribute('cx', String(x));
       c.setAttribute('cy', String(y));
@@ -805,7 +810,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       const created = def.create({ createSVGElement, generateId }) as SVGShape;
       const newShape: SVGShape = {
         ...created,
-        type: def.type || type,
+        type: (def.type as SVGShape['type']) || (type as SVGShape['type']),
         connections: created.connections ?? [],
       };
       svgRef.current.appendChild(newShape.element);
@@ -1335,7 +1340,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       .filter(shape => !idsToRemove.has(shape.id))
       .map(shape => ({
         ...shape,
-        connections: shape.connections?.filter(connId => !idsToRemove.has(connId)),
+        connections: shape.connections?.filter(connId => connId && !idsToRemove.has(connId)),
       }));
 
     idsToRemove.forEach(id => {
@@ -1372,8 +1377,9 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     saveToHistory([], null);
   }, [hideConnectorHandles, hidePorts, onShapeSelect, saveToHistory]);
 
-  const getSelectedShape = useCallback(() => {
-    return selectedShape ? document.getElementById(selectedShape) : null;
+  const getSelectedShape = useCallback((): SVGElement | null => {
+    const el = selectedShape ? document.getElementById(selectedShape) : null;
+    return el instanceof SVGElement ? el : null;
   }, [selectedShape]);
 
   const cloneShapeWithDef = useCallback((shape: SVGShape, offset: number) => {
@@ -1436,7 +1442,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       if (!fromShape || !toShape) return;
 
       const connector = createSVGElement('line');
-      if (!connector) return;
+      if (!connector || !svgRef.current) return;
       const newId = generateId();
       connector.setAttribute('id', newId);
       connector.setAttribute('stroke', sourceShape.data.stroke);
@@ -1673,7 +1679,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
         }
       }
 
-      const handleMouseDown = (e: MouseEvent) => handleShapeMouseDown(e as React.MouseEvent, shape);
+      const handleMouseDown = (e: MouseEvent) =>
+        handleShapeMouseDown(e as unknown as React.MouseEvent<SVGElement>, shape);
       const handleDblClick = (e: MouseEvent) => {
         if (shape.type === 'text') {
           e.stopPropagation();
@@ -1892,6 +1899,8 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     methodsRef.current = methods;
   }, [methods]);
 
+  useImperativeHandle(ref, () => methodsRef.current as CanvasComponentRef, [methods]);
+
   // 处理在画布外释放鼠标时终止端点拖拽
   useEffect(() => {
     const onWindowMouseUp = () => {
@@ -1978,6 +1987,6 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default CanvasComponent;

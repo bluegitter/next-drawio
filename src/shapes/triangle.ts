@@ -123,8 +123,9 @@ export const triangleShape: ShapeDefinition = {
       { id: `${shape.id}-port-left`, dir: { x: -1, y: 0 }, position: 'left' },
     ] as const;
     const cross = (a: Point, b: Point) => a.x * b.y - a.y * b.x;
-    const subtract = (a: Point, b: Point) => ({ x: a.x - b.x, y: a.y - b.y });
-    const intersectRaySegment = (origin: Point, dir: Point, a: Point, b: Point) => {
+    const subtract = (a: Point, b: Point): Point => ({ x: a.x - b.x, y: a.y - b.y });
+    type HitPoint = { x: number; y: number; t: number };
+    const intersectRaySegment = (origin: Point, dir: Point, a: Point, b: Point): HitPoint | null => {
       const seg = subtract(b, a);
       const denom = cross(dir, seg);
       if (Math.abs(denom) < 1e-6) return null;
@@ -141,14 +142,18 @@ export const triangleShape: ShapeDefinition = {
       return null;
     };
     return directions.map(portDir => {
-      let best: { x: number; y: number; t: number } | null = null;
+      let best: HitPoint | null = null;
       edges.forEach(([a, b]) => {
-        const hit = intersectRaySegment({ x: centroid[0], y: centroid[1] }, portDir.dir, { x: a[0], y: a[1] }, { x: b[0], y: b[1] });
+        const hit = intersectRaySegment(
+          { x: centroid[0], y: centroid[1] },
+          portDir.dir,
+          { x: a[0], y: a[1] },
+          { x: b[0], y: b[1] }
+        );
         if (hit && (!best || hit.t < best.t)) best = hit;
       });
-      return best
-        ? { id: portDir.id, x: best.x, y: best.y, position: portDir.position }
-        : { id: portDir.id, x: centroid[0], y: centroid[1], position: portDir.position };
+      const hitPoint: Point = best ? { x: best.x, y: best.y } : { x: centroid[0], y: centroid[1] };
+      return { id: portDir.id, x: hitPoint.x, y: hitPoint.y, position: portDir.position };
     });
   },
 };

@@ -61,6 +61,8 @@ export const Default: Story = {
       <div className="flex flex-col gap-4">
         <InteractiveCanvasComponent
           {...args}
+          width={args.width ?? 1800}
+          height={args.height ?? 900}
           onReady={handleCanvasReady}
           onShapeSelect={handleShapeSelect}
           onCanvasChange={handleCanvasChange}
@@ -107,6 +109,14 @@ export const WithCustomBackground: Story = {
     width: 600,
     height: 400,
     backgroundColor: '#f3f4f6',
+    autoResize: false,
+    onReady: (canvas: SVGSVGElement, methods: CanvasComponentRef) => {
+      console.log('Canvas ready:', canvas);
+      setTimeout(() => {
+        methods.addRectangle();
+        methods.addCircle();
+      }, 100);
+    },
   },
 };
 
@@ -145,7 +155,7 @@ export const InteractiveDemo: Story = {
     height: 900,
     backgroundColor: '#ffffff',
     autoResize: false,
-    onReady: (canvas, methods) => {
+    onReady: (canvas: SVGSVGElement, methods: CanvasComponentRef) => {
       console.log('Canvas ready:', canvas);
       // 添加一些示例图形
       setTimeout(() => {
@@ -155,7 +165,7 @@ export const InteractiveDemo: Story = {
         console.log('已添加示例图形');
       }, 100);
     },
-    onShapeSelect: (shape) => {
+    onShapeSelect: (shape: SVGElement | null) => {
       const shapeType = shape?.tagName.toLowerCase() || '无';
       console.log(`选中图形: ${shapeType}`);
     },
@@ -233,6 +243,8 @@ export const InteractiveDemo: Story = {
         
         <InteractiveCanvasComponent
           {...args}
+          width={args.width ?? 1800}
+          height={args.height ?? 900}
           onReady={handleCanvasReady}
           onShapeSelect={handleShapeSelect}
         />
@@ -372,6 +384,8 @@ export const ConnectionDemo: Story = {
 
         <InteractiveCanvasComponent
           {...args}
+          width={args.width ?? 800}
+          height={args.height ?? 600}
           onReady={handleCanvasReady}
           onShapeSelect={handleShapeSelect}
         />
@@ -527,6 +541,8 @@ export const AdvancedConnectionDemo: Story = {
 
         <InteractiveCanvasComponent
           {...args}
+          width={args.width ?? 900}
+          height={args.height ?? 700}
           onReady={handleCanvasReady}
           onShapeSelect={handleShapeSelect}
         />
