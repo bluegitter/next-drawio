@@ -25,6 +25,7 @@ export interface CanvasComponentRef {
   bringToFront: () => void;
   sendToBack: () => void;
   rotateSelected: (angle: number) => void;
+  rotateSelectedBy: (delta: number) => void;
   flipSelectedHorizontal: () => void;
   flipSelectedVertical: () => void;
   scaleSelected: (scale: number) => void;
@@ -1932,6 +1933,14 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     });
   }, [applyTransform, updateSelectedShape]);
 
+  const rotateSelectedBy = useCallback((delta: number) => {
+    updateSelectedShape(shape => {
+      const current = shape.data.rotation || 0;
+      shape.data.rotation = current + delta;
+      applyTransform(shape);
+    });
+  }, [applyTransform, updateSelectedShape]);
+
   const flipSelectedHorizontal = useCallback(() => {
     updateSelectedShape(shape => {
       shape.data.flipX = !shape.data.flipX;
@@ -2394,6 +2403,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     bringToFront,
     sendToBack,
     rotateSelected,
+    rotateSelectedBy,
     flipSelectedHorizontal,
     flipSelectedVertical,
     scaleSelected,
@@ -2410,11 +2420,9 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     addShapeAt,
   };
 
-  useEffect(() => {
-    methodsRef.current = methods;
-  }, [methods]);
-
-  useImperativeHandle(ref, () => methodsRef.current as CanvasComponentRef, [methods]);
+  // 始终暴露最新方法（避免旧引用缺少新增方法）
+  methodsRef.current = methods;
+  useImperativeHandle(ref, () => methods as CanvasComponentRef, [methods]);
 
   // 处理在画布外释放鼠标时终止端点拖拽
   useEffect(() => {

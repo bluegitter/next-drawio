@@ -205,14 +205,14 @@ export default function Home() {
 
   const handleRotateLeft = useCallback(() => {
     if (canvasMethodsRef.current) {
-      canvasMethodsRef.current.rotateSelected(-90);
+      canvasMethodsRef.current.rotateSelectedBy(-90);
       refreshHistoryState();
     }
   }, [refreshHistoryState]);
 
   const handleRotateRight = useCallback(() => {
     if (canvasMethodsRef.current) {
-      canvasMethodsRef.current.rotateSelected(90);
+      canvasMethodsRef.current.rotateSelectedBy(90);
       refreshHistoryState();
     }
   }, [refreshHistoryState]);
