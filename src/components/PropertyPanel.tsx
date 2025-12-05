@@ -134,8 +134,8 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const shapeType = selectedShape.tagName.toLowerCase();
 
   return (
-    <div className="w-72 bg-white border-l border-gray-200 p-0 flex flex-col">
-      <div className="grid grid-cols-3 text-sm border-b border-gray-200">
+    <div className="w-80 bg-white border-l border-gray-200 p-0 flex flex-col min-h-0">
+      <div className="grid grid-cols-3 text-sm border-b border-gray-200 flex-shrink-0">
         {(['style', 'text', 'shape'] as const).map(key => (
           <button
             key={key}
@@ -150,7 +150,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
         ))}
       </div>
 
-      <div className="p-4 overflow-y-auto space-y-4">
+      <div className="pl-4 pr-3 py-4 overflow-y-auto space-y-4 flex-1 min-h-0">
         {/* 样式 */}
         {tab === 'style' && (
           <div className="space-y-4">

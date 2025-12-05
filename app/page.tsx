@@ -230,7 +230,18 @@ export default function Home() {
     const iconName = e.dataTransfer.getData('application/x-draw-icon-name');
 
     if (shapeType) {
-      canvasMethodsRef.current.addShapeAt(shapeType, { x, y });
+      const typeMap: Record<string, string> = {
+        rectangle: 'rect',
+        roundedRect: 'roundedRect',
+        circle: 'circle',
+        triangle: 'triangle',
+        line: 'line',
+        polyline: 'polyline',
+        text: 'text',
+        connect: 'connector',
+      };
+      const mappedType = typeMap[shapeType] || shapeType;
+      canvasMethodsRef.current.addShapeAt(mappedType, { x, y });
     } else if (iconUrl) {
       canvasMethodsRef.current.addSvgIcon(iconUrl, { width: 80, height: 60, position: { x, y }, iconName: iconName || undefined });
     }
@@ -751,58 +762,21 @@ export default function Home() {
         </div>
 
         {/* 右侧属性栏 */}
-        <div className="w-72 bg-white border-l border-gray-200 p-4 space-y-3">
-          <PropertyPanel
-            selectedShape={selectedShape}
-            onFillChange={handleFillChange}
-            onStrokeChange={handleStrokeChange}
-            onStrokeWidthChange={handleStrokeWidthChange}
-            onRotationChange={handleRotationChange}
-            onScaleChange={handleScaleChange}
-            onOpacityChange={handleOpacityChange}
-            onDelete={handleDelete}
-            onDuplicate={handleDuplicate}
-            onBringToFront={handleBringToFront}
-            onSendToBack={handleSendToBack}
-          />
-
-          <div className="space-y-2 text-sm text-gray-700 border-t pt-3">
-            <div className="flex items-center gap-2">
-              <input type="checkbox" defaultChecked /> <span>网格</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" defaultChecked /> <span>页面视图图</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" /> <span>背景</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" /> <span>背景色</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" /> <span>阴影</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" defaultChecked /> <span>连接箭头</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" defaultChecked /> <span>连接点</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" defaultChecked /> <span>参考线</span>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-gray-500">页面尺寸</label>
-              <select className="w-full border border-gray-300 rounded px-2 py-1 text-sm">
-                <option>A4 (210 mm x 297 mm)</option>
-                <option>A3 (297 mm x 420 mm)</option>
-              </select>
-              <div className="flex items-center gap-2 text-xs">
-                <input type="radio" name="orientation" defaultChecked /> 竖向
-                <input type="radio" name="orientation" className="ml-3" /> 横向
-              </div>
-              <Button size="sm" variant="ghost" className="w-full border mt-1">清除默认风格</Button>
-            </div>
+        <div className="w-80 bg-white border-l border-gray-200 flex flex-col min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+            <PropertyPanel
+              selectedShape={selectedShape}
+              onFillChange={handleFillChange}
+              onStrokeChange={handleStrokeChange}
+              onStrokeWidthChange={handleStrokeWidthChange}
+              onRotationChange={handleRotationChange}
+              onScaleChange={handleScaleChange}
+              onOpacityChange={handleOpacityChange}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+              onBringToFront={handleBringToFront}
+              onSendToBack={handleSendToBack}
+            />
           </div>
         </div>
       </div>
