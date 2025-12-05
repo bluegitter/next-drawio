@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/Input';
 import { EnhancedToolbar, ToolType } from '@/components/EnhancedToolbar';
 import InteractiveCanvasComponent, { CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
 import PropertyPanel from '@/components/PropertyPanel';
-import { sidebarIcons, getIconUrl } from '@/constants/iconList';
 import { SHAPE_ICONS, CHECK_ICON } from '@/constants/svgIcons';
+import { sidebarIcons, getIconUrl } from '@/constants/iconList';
 import {
   PanelsLeftRight,
   LayoutTemplate,
@@ -29,6 +29,8 @@ import {
   Shrink,
   Sparkles,
   ChevronDown,
+  ChevronRight,
+  Search,
 } from 'lucide-react';
 import './globals.css';
 
@@ -356,6 +358,14 @@ export default function Home() {
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    general: true,
+    网络: true,
+  });
+
+  const toggleSection = useCallback((key: string) => {
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   const renderMenu = (items: any[], isSub?: boolean) => (
     <div
@@ -536,92 +546,102 @@ export default function Home() {
       {/* 主体区域 */}
       <div className="flex flex-1 overflow-hidden">
         {/* 左侧形状库 */}
-        <div className="w-72 bg-white border-r border-gray-200 flex flex-col">
-          <div className="px-3 py-2">
-            <input
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none"
-              placeholder="输入搜索"
-            />
-          </div>
-          <div className="overflow-y-auto flex-1 px-2 pb-4">
-          <div className="text-xs font-semibold text-gray-500 px-2 py-2 border-b">便捷本</div>
-          <div className="grid grid-cols-4 gap-2 px-2 py-2">
-              {[
-                { key: 'rectangle', label: '矩形' },
-                { key: 'roundedRect', label: '圆角矩形' },
-                { key: 'circle', label: '圆形' },
-                { key: 'triangle', label: '三角形' },
-                { key: 'line', label: '直线' },
-                { key: 'polyline', label: '折线' },
-                { key: 'text', label: '文本' },
-                { key: 'connect', label: '连接' },
-              ].map(item => (
-                <button
-                  key={item.key}
-                  onClick={() => handleToolChange(item.key as ToolType)}
-                  className="h-14 border border-gray-200 rounded bg-white hover:border-blue-400 flex flex-col items-center justify-center text-gray-600"
-                  title={item.key}
-                >
-                  <img src={SHAPE_ICONS[item.key]} alt={item.label} className="w-6 h-6 mb-1" />
-                  <span className="text-[11px]">{item.label}</span>
-                </button>
-              ))}
+        <div className="w-[320px] min-w-[280px] bg-[#f1f3f5] border-r border-gray-200 flex flex-col">
+          <div className="px-4 pt-4">
+            <div className="flex items-center bg-white border border-gray-200 rounded-full shadow-sm px-4 py-2">
+              <input
+                className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none"
+                placeholder="键入 / 进行搜索"
+              />
+              <Search size={18} className="text-gray-500" />
             </div>
+          </div>
 
-            <div className="text-xs font-semibold text-gray-500 px-2 py-2 border-b">
-              <div className="flex items-center justify-between mb-2">
-                <span>组合</span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="border border-gray-200 text-xs px-2"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Combine button clicked, canvasMethodsRef.current:', canvasMethodsRef.current);
-                    if (canvasMethodsRef.current) {
-                      canvasMethodsRef.current.combineSelected();
-                      }
-                    }}
-                  >
-                    组合
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="border border-gray-200 text-xs px-2"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      canvasMethodsRef.current?.ungroupSelected();
-                    }}
-                  >
-                    取消
-                  </Button>
+          <div className="overflow-y-auto flex-1 px-4 py-4 space-y-4">
+            <div>
+              <button
+                className="flex items-center gap-2 text-gray-800 font-semibold text-sm mb-3 hover:text-gray-900"
+                onClick={() => toggleSection('general')}
+              >
+                {expandedSections.general ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                <span>通用</span>
+              </button>
+              {expandedSections.general && (
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { key: 'rectangle', label: '矩形' },
+                    { key: 'roundedRect', label: '圆角矩形' },
+                    { key: 'circle', label: '圆形' },
+                    { key: 'triangle', label: '三角形' },
+                    { key: 'line', label: '直线' },
+                    { key: 'polyline', label: '折线' },
+                    { key: 'text', label: '文本' },
+                    { key: 'connect', label: '连接' },
+                  ].map(item => (
+                    <button
+                      key={item.key}
+                      onClick={() => handleToolChange(item.key as ToolType)}
+                      className="h-12 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition"
+                      title={item.key}
+                    >
+                      <img src={SHAPE_ICONS[item.key]} alt={item.label} className="w-5 h-5 mb-1" />
+                      <span className="text-[10px]">{item.label}</span>
+                    </button>
+                  ))}
                 </div>
-              </div>
-              <div className="text-xs text-gray-400 px-2">
-                提示：按住 Ctrl/Cmd 键点击多个图形进行多选
-              </div>
+              )}
             </div>
 
-            <div className="text-xs font-semibold text-gray-500 px-2 py-2 border-b">网络图标</div>
-            <div className="grid grid-cols-3 gap-3 px-2 py-3 max-h-96 overflow-y-auto">
-              {sidebarIcons.map(icon => (
-                <button
-                  key={icon.name}
-                  className="flex flex-col items-center gap-1 border border-gray-200 rounded p-2 hover:border-blue-400 hover:shadow-sm transition bg-white"
-                  onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60 })}
-                  title={icon.name}
-                >
-                  <img src={getIconUrl(icon)} alt={icon.name} className="w-12 h-12 object-contain" />
-                  <span className="text-xs text-gray-600 truncate w-full text-center">{icon.name}</span>
-                </button>
+            <div>
+              <button
+                className="flex items-center gap-2 text-gray-800 font-semibold text-sm mb-3 hover:text-gray-900"
+                onClick={() => toggleSection('网络')}
+              >
+                {expandedSections['网络'] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                <span>网络</span>
+              </button>
+              {expandedSections['网络'] && (
+                <div className="grid grid-cols-4 gap-2">
+                  {sidebarIcons.map(icon => (
+                    <button
+                      key={icon.name}
+                      className="h-11 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition px-1.5 py-2"
+                      onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60 })}
+                      title={icon.name}
+                    >
+                      <img src={getIconUrl(icon)} alt={icon.name} className="w-8 h-8 object-contain mb-0.5" />
+                      <span className="text-[9px] text-center leading-tight">{icon.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 text-gray-700 text-sm">
+              {['杂项', '高级', '基本', '箭头', '流程图', '实体关系', 'UML', '机箱'].map(cat => (
+                <div key={cat} className="space-y-1">
+                  <button
+                    className="flex w-full items-center gap-2 text-left hover:text-gray-900"
+                    onClick={() => toggleSection(cat)}
+                  >
+                    {expandedSections[cat] ? <ChevronDown size={16} className="text-gray-500" /> : <ChevronRight size={16} className="text-gray-500" />}
+                    <span>{cat}</span>
+                  </button>
+                  {expandedSections[cat] && (
+                    <div className="ml-6 text-xs text-gray-400">
+                      暂无该分类图形
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
-          <div className="border-t px-2 py-2 text-blue-500 text-sm cursor-pointer hover:underline">+ 更多图形</div>
+
+          <div className="px-4 pb-4">
+            <button className="w-full bg-[#d8e9ff] text-[#2563eb] font-semibold rounded-md py-3 text-sm hover:bg-[#cbe1fb]">
+              + 更多图形
+            </button>
+          </div>
         </div>
 
         {/* 画布区 */}
