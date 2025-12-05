@@ -1674,6 +1674,16 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       }
       
       const groupId = shape.data.groupId;
+      const alreadyMultiSelected = selectedIds.size > 1 && selectedIds.has(shape.id);
+
+      if (alreadyMultiSelected) {
+        // 维持当前多选集合，直接进入拖拽
+        onShapeSelect?.(shape.element);
+        setIsDragging(true);
+        setDragStart({ x, y });
+        return;
+      }
+
       if (groupId) {
         const groupIds = shapes.filter(s => s.data.groupId === groupId).map(s => s.id);
         console.log('Shape is in group, selecting all group members:', groupIds);
