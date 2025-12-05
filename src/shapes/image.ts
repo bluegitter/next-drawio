@@ -2,7 +2,7 @@ import { ShapeDefinition, ShapeContext, Bounds, Point } from './types';
 
 export const imageShape: ShapeDefinition = {
   type: 'image',
-  create: (ctx: ShapeContext, options?: { href?: string; width?: number; height?: number }) => {
+  create: (ctx: ShapeContext, options?: { href?: string; width?: number; height?: number; svgText?: string }) => {
     const image = ctx.createSVGElement('image');
     if (!image) throw new Error('Failed to create image');
     const id = ctx.generateId();
@@ -31,6 +31,8 @@ export const imageShape: ShapeDefinition = {
         width,
         height,
         href: options?.href || '',
+        originalHref: options?.href || '',
+        originalSvgText: options?.svgText || null,
         fill: 'none',
         stroke: 'none',
         strokeWidth: 0,

@@ -216,6 +216,28 @@ export default function Home() {
     setContextMenu(prev => ({ ...prev, open: false }));
   }, []);
 
+  const handleCanvasDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!canvasMethodsRef.current) return;
+    const svg = canvasMethodsRef.current.getCanvas?.();
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const shapeType = e.dataTransfer.getData('application/x-draw-shape');
+    const iconUrl = e.dataTransfer.getData('application/x-draw-icon');
+
+    if (shapeType) {
+      canvasMethodsRef.current.addShapeAt(shapeType, { x, y });
+    } else if (iconUrl) {
+      canvasMethodsRef.current.addSvgIcon(iconUrl, { width: 80, height: 60, position: { x, y } });
+    }
+  }, []);
+
+  const handleCanvasDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  }, []);
+
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, open: true });
@@ -588,12 +610,17 @@ export default function Home() {
                     { key: 'text', label: '文本' },
                     { key: 'connect', label: '连接' },
                   ].map(item => (
-                    <button
-                      key={item.key}
-                      onClick={() => handleToolChange(item.key as ToolType)}
-                      className="h-12 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition"
-                      title={item.key}
-                    >
+                  <button
+                    key={item.key}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/x-draw-shape', item.key);
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
+                    onClick={() => handleToolChange(item.key as ToolType)}
+                    className="h-12 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition"
+                    title={item.key}
+                  >
                       <img src={SHAPE_ICONS[item.key]} alt={item.label} className="w-5 h-5 mb-1" />
                       <span className="text-[10px]">{item.label}</span>
                     </button>
@@ -615,6 +642,11 @@ export default function Home() {
                   {sidebarIcons.map(icon => (
                     <button
                       key={icon.name}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/x-draw-icon', getIconUrl(icon));
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
                       className="h-11 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition px-1.5 py-2"
                       onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60 })}
                       title={icon.name}
@@ -658,6 +690,8 @@ export default function Home() {
         <div
           className="flex-1 bg-[#eaeaea] overflow-auto flex justify-center items-start p-4"
           onContextMenu={handleCanvasContextMenu}
+          onDrop={handleCanvasDrop}
+          onDragOver={handleCanvasDragOver}
         >
           <div
             className="relative"
