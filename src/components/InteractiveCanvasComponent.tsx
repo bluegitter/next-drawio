@@ -511,18 +511,21 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const created: SVGElement[] = [];
 
     cornerHandles.forEach(corner => {
-      const handle = createSVGElement('circle');
+      const handle = createSVGElement('rect');
       if (!handle) return;
+      const size = 10;
       
-      handle.setAttribute('cx', String(corner.x));
-      handle.setAttribute('cy', String(corner.y));
-      handle.setAttribute('r', '6');
+      handle.setAttribute('x', String(corner.x - size / 2));
+      handle.setAttribute('y', String(corner.y - size / 2));
+      handle.setAttribute('width', String(size));
+      handle.setAttribute('height', String(size));
       handle.setAttribute('fill', '#f59e0b'); // 橙色用于区分圆角手柄
       handle.setAttribute('stroke', '#d97706');
       handle.setAttribute('stroke-width', '2');
       handle.setAttribute('data-corner-handle', corner.type);
       handle.setAttribute('data-shape-id', shape.id);
       handle.setAttribute('cursor', corner.cursor);
+      handle.setAttribute('transform', `rotate(45 ${corner.x} ${corner.y})`); // 菱形手柄
       handle.style.opacity = '0.8';
 
       const onCornerMouseDown = (e: MouseEvent) => {
@@ -1323,48 +1326,27 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       const dy = y - dragStart.y;
       
       if (draggingCornerHandle) {
-        console.log('处理圆角调整:', draggingCornerHandle, 'dx:', dx, 'dy:', dy);
-        // 专门处理圆角调整
+        // 圆角只允许水平拖拽，最大圆角为半径=最短边的一半
         const shape = shapes.find(s => s.id === draggingCornerHandle.shapeId);
         if (shape && shape.type === 'roundedRect') {
-          console.log('找到圆角矩形，当前圆角:', shape.data.cornerRadius);
-          const adjustment = Math.abs(dx) + Math.abs(dy);
-          const maxRadius = Math.min((shape.data.width || 0), (shape.data.height || 0)) / 4;
-          
-          // 使用当前shape的圆角而不是开始时的圆角，避免被重置
+          const maxRadius = Math.min((shape.data.width || 0), (shape.data.height || 0)) / 2;
           const currentCornerRadius = shape.data.cornerRadius || 0;
-          
-          // 增大调整幅度 - 使用更大的系数
-          let newCornerRadius;
-          if (dx > 0) {
-            // 向右拖拽 - 增加圆角
-            newCornerRadius = Math.min(maxRadius, currentCornerRadius + adjustment * 0.3);
-          } else if (dx < 0) {
-            // 向左拖拽 - 减少圆角
-            newCornerRadius = Math.max(0, currentCornerRadius - adjustment * 0.3);
-          } else {
-            // 纯垂直拖拽，不做改变
-            newCornerRadius = currentCornerRadius;
-          }
-          
-          console.log('新的圆角半径:', newCornerRadius, '从:', currentCornerRadius, 'max:', maxRadius);
-          
-          // 直接更新SVG元素和内存中的数据
-          const currentRx = shape.element.getAttribute('rx');
-          
+          const newCornerRadius = Math.max(0, Math.min(maxRadius, currentCornerRadius + dx));
+          const currentX = x;
+
           shape.element.setAttribute('rx', String(newCornerRadius));
           shape.element.setAttribute('ry', String(newCornerRadius));
-          
-          // 强制触发SVG重绘 - 通过临时修改transform属性
-          const currentTransform = shape.element.getAttribute('transform') || '';
-          shape.element.setAttribute('transform', currentTransform + ' translate(0.001,0.001)');
-          setTimeout(() => {
-            shape.element.setAttribute('transform', currentTransform);
-          }, 0);
-          
-          console.log('SVG属性更新前:', currentRx, '更新后:', shape.element.getAttribute('rx'));
-          
-          // 更新内存数据
+
+          // 让手柄跟随鼠标水平移动
+          const handles = cornerHandlesRef.current.get(shape.id);
+          const handleEl = handles?.find(h => h.getAttribute('data-corner-handle') === draggingCornerHandle.handleType);
+          if (handleEl) {
+            const size = Number(handleEl.getAttribute('width')) || 10;
+            const currentY = Number(handleEl.getAttribute('y')) || 0;
+            handleEl.setAttribute('x', String(currentX - size / 2));
+            handleEl.setAttribute('y', String(currentY));
+          }
+
           const updatedShape = {
             ...shape,
             data: {
@@ -1372,17 +1354,15 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
               cornerRadius: newCornerRadius
             }
           };
-          
+
           const nextShapes = shapes.map(s => s.id === shape.id ? updatedShape : s);
           setShapesState(() => nextShapes);
-          
-          // 更新拖拽状态，使用当前的圆角值
+
           setDraggingCornerHandle({
             ...draggingCornerHandle,
             startCornerRadius: newCornerRadius
           });
-          
-          // 延迟更新圆角手柄，避免覆盖SVG属性
+
           setTimeout(() => {
             showCornerHandles(updatedShape);
           }, 0);

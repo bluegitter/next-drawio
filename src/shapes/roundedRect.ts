@@ -144,41 +144,19 @@ export const roundedRectShape: ShapeDefinition = {
     ];
   },
   getCornerHandles: (shape) => {
-    const { x = 0, y = 0, width = 0, height = 0, cornerRadius = 0 } = shape.data;
+    const { x = 0, y = 0, width = 0 } = shape.data;
+    const handleSize = 10;
+    const offset = handleSize * 1.2;
     return [
-      // 圆角调整手柄 - 按照参考图的位置
       {
-        id: `${shape.id}-corner-tl`,
-        type: 'corner-tl',
-        x: x + cornerRadius + 8, // 从圆角开始位置向外偏移
-        y: y + cornerRadius + 8,
+        id: `${shape.id}-corner-top`,
+        type: 'corner-top',
+        x: x + width - offset,
+        // 固定在顶部，只允许左右拖拽调整圆角
+        y: y + offset,
         visible: true,
-        cursor: 'nwse-resize'
+        cursor: 'ew-resize',
       },
-      {
-        id: `${shape.id}-corner-tr`,
-        type: 'corner-tr',
-        x: x + width - cornerRadius - 8, // 从圆角开始位置向外偏移
-        y: y + cornerRadius + 8,
-        visible: true,
-        cursor: 'nesw-resize'
-      },
-      {
-        id: `${shape.id}-corner-br`,
-        type: 'corner-br',
-        x: x + width - cornerRadius - 8,
-        y: y + height - cornerRadius - 8,
-        visible: true,
-        cursor: 'nwse-resize'
-      },
-      {
-        id: `${shape.id}-corner-bl`,
-        type: 'corner-bl',
-        x: x + cornerRadius + 8,
-        y: y + height - cornerRadius - 8,
-        visible: true,
-        cursor: 'nesw-resize'
-      }
     ];
   },
 };

@@ -10,6 +10,7 @@ export const imageShape: ShapeDefinition = {
     const y = 120 + Math.random() * 80;
     const width = options?.width ?? 120;
     const height = options?.height ?? 80;
+    const size = Math.max(width, height);
     if (options?.href) {
       image.setAttribute('href', options.href);
       image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', options.href);
@@ -17,8 +18,8 @@ export const imageShape: ShapeDefinition = {
     image.setAttribute('id', id);
     image.setAttribute('x', String(x));
     image.setAttribute('y', String(y));
-    image.setAttribute('width', String(width));
-    image.setAttribute('height', String(height));
+    image.setAttribute('width', String(size));
+    image.setAttribute('height', String(size));
     image.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     image.setAttribute('cursor', 'move');
     return {
@@ -28,8 +29,8 @@ export const imageShape: ShapeDefinition = {
       data: {
         x,
         y,
-        width,
-        height,
+        width: size,
+        height: size,
         href: options?.href || '',
         originalHref: options?.href || '',
         originalSvgText: options?.svgText || null,
@@ -86,6 +87,32 @@ export const imageShape: ShapeDefinition = {
         height = Math.max(20, height - dy);
         break;
     }
+
+    // 强制保持 1:1 外框。根据拖拽方向调整锚点，保持相对边固定。
+    const size = Math.max(width, height);
+    switch (handle) {
+      case 'se':
+        width = size;
+        height = size;
+        break;
+      case 'sw':
+        x = x + (width - size);
+        width = size;
+        height = size;
+        break;
+      case 'ne':
+        y = y + (height - size);
+        width = size;
+        height = size;
+        break;
+      case 'nw':
+        x = x + (width - size);
+        y = y + (height - size);
+        width = size;
+        height = size;
+        break;
+    }
+
     shape.element.setAttribute('x', String(x));
     shape.element.setAttribute('y', String(y));
     shape.element.setAttribute('width', String(width));
