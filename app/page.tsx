@@ -129,6 +129,7 @@ export default function Home() {
 
   // 属性面板处理函数
   const handleFillChange = useCallback((color: string) => {
+    console.log('[PropertyPanel] fill change', { color, hasCanvas: !!canvasMethodsRef.current });
     if (canvasMethodsRef.current) {
       canvasMethodsRef.current.changeSelectedFill(color);
       refreshHistoryState();
@@ -226,11 +227,12 @@ export default function Home() {
     const y = e.clientY - rect.top;
     const shapeType = e.dataTransfer.getData('application/x-draw-shape');
     const iconUrl = e.dataTransfer.getData('application/x-draw-icon');
+    const iconName = e.dataTransfer.getData('application/x-draw-icon-name');
 
     if (shapeType) {
       canvasMethodsRef.current.addShapeAt(shapeType, { x, y });
     } else if (iconUrl) {
-      canvasMethodsRef.current.addSvgIcon(iconUrl, { width: 80, height: 60, position: { x, y } });
+      canvasMethodsRef.current.addSvgIcon(iconUrl, { width: 80, height: 60, position: { x, y }, iconName: iconName || undefined });
     }
   }, []);
 
@@ -644,12 +646,13 @@ export default function Home() {
                     <button
                       key={icon.name}
                       draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('application/x-draw-icon', getIconUrl(icon));
-                        e.dataTransfer.effectAllowed = 'copy';
-                      }}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/x-draw-icon', getIconUrl(icon));
+                      e.dataTransfer.setData('application/x-draw-icon-name', icon.name);
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
                       className="h-11 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition px-1.5 py-2"
-                      onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60 })}
+                      onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60, iconName: icon.name })}
                       title={icon.name}
                     >
                       <img src={getIconUrl(icon)} alt={icon.name} className="w-8 h-8 object-contain mb-0.5" />
@@ -676,10 +679,11 @@ export default function Home() {
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData('application/x-draw-icon', getIconUrl(icon));
+                        e.dataTransfer.setData('application/x-draw-icon-name', icon.name);
                         e.dataTransfer.effectAllowed = 'copy';
                       }}
                       className="h-11 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition px-1.5 py-2"
-                      onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60 })}
+                      onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60, iconName: icon.name })}
                       title={icon.name}
                     >
                       <img src={getIconUrl(icon)} alt={icon.name} className="w-8 h-8 object-contain mb-0.5" />

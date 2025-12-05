@@ -2,7 +2,7 @@ import { ShapeDefinition, ShapeContext, Bounds, Point } from './types';
 
 export const imageShape: ShapeDefinition = {
   type: 'image',
-  create: (ctx: ShapeContext, options?: { href?: string; width?: number; height?: number; svgText?: string }) => {
+  create: (ctx: ShapeContext, options?: { href?: string; width?: number; height?: number; svgText?: string; iconName?: string }) => {
     const image = ctx.createSVGElement('image');
     if (!image) throw new Error('Failed to create image');
     const id = ctx.generateId();
@@ -33,6 +33,7 @@ export const imageShape: ShapeDefinition = {
         href: options?.href || '',
         originalHref: options?.href || '',
         originalSvgText: options?.svgText || null,
+        iconName: options?.iconName,
         fill: 'none',
         stroke: 'none',
         strokeWidth: 0,
@@ -112,7 +113,36 @@ export const imageShape: ShapeDefinition = {
     };
   },
   getPorts: (shape) => {
-    const { x = 0, y = 0, width = 0, height = 0 } = shape.data;
+    const { x = 0, y = 0, width = 0, height = 0, iconName } = shape.data;
+
+    const isTransformer =
+      iconName?.includes('三圈变压器') ||
+      (shape.data.href || '').includes('三圈变压器');
+    const isSwitch =
+      iconName?.includes('刀闸开关') ||
+      (shape.data.href || '').includes('刀闸开关');
+
+    if (isTransformer) {
+      const cx = x + width / 2.65;
+      const cy = y + height / 2;
+      const dy = height * 0.45;
+      return [
+        { id: `${shape.id}-port-top`, x: cx, y: y + height * 0.08, position: 'top' },
+        { id: `${shape.id}-port-right`, x: x + width * 0.77, y: cy, position: 'right' },
+        { id: `${shape.id}-port-bottom`, x: cx, y: y + height * 0.92, position: 'bottom' },
+      ];
+    }
+
+    if (isSwitch) {
+      const cx = x + width / 1.7;
+      const cy = y + height / 2;
+      const dy = height * 0.38;
+      return [
+        { id: `${shape.id}-port-top`, x: cx, y: cy - dy, position: 'top' },
+        { id: `${shape.id}-port-bottom`, x: cx, y: cy + dy, position: 'bottom' },
+      ];
+    }
+
     return [
       { id: `${shape.id}-port-top`, x: x + width / 2, y, position: 'top' },
       { id: `${shape.id}-port-right`, x: x + width, y: y + height / 2, position: 'right' },

@@ -12,7 +12,7 @@ export interface CanvasComponentRef {
   addLine: () => void;
   addPolyline: () => void;
   addText: () => void;
-  addSvgIcon: (href: string, options?: { width?: number; height?: number; position?: { x: number; y: number } }) => void;
+  addSvgIcon: (href: string, options?: { width?: number; height?: number; position?: { x: number; y: number }; iconName?: string }) => void;
   addShapeAt: (type: string, position: { x: number; y: number }) => void;
    combineSelected: () => void;
    ungroupSelected: () => void;
@@ -109,6 +109,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
 }, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [shapes, setShapes] = useState<SVGShape[]>([]);
+  const shapesRef = useRef<SVGShape[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryState[]>([{ shapes: [], selectedIds: [] }]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -187,6 +188,14 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   useEffect(() => {
     selectedIdsRef.current = selectedIds;
   }, [selectedIds]);
+
+  const setShapesState = useCallback((updater: (prev: SVGShape[]) => SVGShape[]) => {
+    setShapes(prev => {
+      const next = updater(prev);
+      shapesRef.current = next;
+      return next;
+    });
+  }, []);
 
   // 生成唯一ID
   const generateId = useCallback(() => {
@@ -896,7 +905,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       return { ...shape, element: clonedElement };
     });
 
-    setShapes(restoredShapes);
+    setShapesState(() => restoredShapes);
     setSelectedIds(new Set(state.selectedIds || []));
     setIsConnecting(false);
     setConnectionStart(null);
@@ -918,7 +927,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
 
     const updatedShapes = [...shapes];
     updater(updatedShapes[shapeIndex]);
-    setShapes(updatedShapes);
+    setShapesState(() => updatedShapes);
 
     if (!options?.skipHistory) {
       saveToHistory(updatedShapes, selectedIds);
@@ -935,7 +944,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       }
       return shape;
     });
-    setShapes(updatedShapes);
+    setShapesState(() => updatedShapes);
     saveToHistory(updatedShapes, currentSel);
   }, [saveToHistory, shapes]);
 
@@ -952,7 +961,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       }
       return shape;
     });
-    setShapes(updatedShapes);
+    setShapesState(() => updatedShapes);
     saveToHistory(updatedShapes, currentSel);
   }, [saveToHistory, shapes]);
 
@@ -990,7 +999,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         }
       }
 
-      setShapes(prev => {
+      setShapesState(prev => {
         const updated = [...prev, newShape];
         saveToHistory(updated, newShape.id);
         return updated;
@@ -1028,11 +1037,25 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   }, []);
 
   const tintSvgText = useCallback((svgText: string, color: string) => {
-    return svgText
-      .replace(/stroke="[^"]*"/g, `stroke="${color}"`)
-      .replace(/(fill=")(?!none")[^"]*"/g, `$1${color}"`)
-      .replace(/stroke%3D%22[^%]*%22/g, `stroke%3D%22${encodeURIComponent(color)}%22`)
-      .replace(/fill%3D%22(?!none)[^%]*%22/g, `fill%3D%22${encodeURIComponent(color)}%22`);
+    console.log('[tintSvgText] start', { color, inputLength: svgText?.length });
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgText, 'image/svg+xml');
+      const paths = Array.from(doc.querySelectorAll('path'));
+      paths.forEach(path => {
+        path.setAttribute('fill', color);
+      });
+      const serialized = new XMLSerializer().serializeToString(doc.documentElement);
+      console.log('[tintSvgText] done', { pathCount: paths.length, outputLength: serialized.length });
+      return serialized;
+    } catch (err) {
+      console.warn('DOM parse tint failed, fallback to regex', err);
+      return svgText
+        .replace(/stroke="[^"]*"/g, `stroke="${color}"`)
+        .replace(/(fill=")(?!none")[^"]*"/g, `$1${color}"`)
+        .replace(/stroke%3D%22[^%]*%22/g, `stroke%3D%22${encodeURIComponent(color)}%22`)
+        .replace(/fill%3D%22(?!none)[^%]*%22/g, `fill%3D%22${encodeURIComponent(color)}%22`);
+    }
   }, []);
 
   const tintDataUri = useCallback((href: string, color: string) => {
@@ -1040,18 +1063,20 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     try {
       const decoded = decodeDataUri(href);
       const tinted = tintSvgText(decoded, color);
-      return toDataUri(tinted) || href;
+      const uri = toDataUri(tinted) || href;
+      console.log('[tintDataUri] success', { color, producedUri: !!uri, inputPreview: href.slice(0, 40) });
+      return uri;
     } catch (err) {
       console.warn('Tint svg icon failed, fallback original', err);
       return href;
     }
   }, [decodeDataUri, tintSvgText, toDataUri]);
-  const addSvgIcon = useCallback((href: string, options?: { width?: number; height?: number; position?: { x: number; y: number } }) => {
-    const { position, ...rest } = options || {};
+  const addSvgIcon = useCallback((href: string, options?: { width?: number; height?: number; position?: { x: number; y: number }; iconName?: string }) => {
+    const { position, iconName, ...rest } = options || {};
     const isDataUri = href.startsWith('data:image/svg+xml');
     if (isDataUri) {
       const svgText = decodeDataUri(href);
-      addShape('image', { href, width: rest.width, height: rest.height, svgText }, position);
+      addShape('image', { href, width: rest.width, height: rest.height, svgText, iconName }, position);
       return;
     }
 
@@ -1061,14 +1086,14 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           const res = await fetch(href);
           const text = await res.text();
           const dataUri = toDataUri(text);
-          addShape('image', { href: dataUri || href, width: rest.width, height: rest.height, svgText: text }, position);
+          addShape('image', { href: dataUri || href, width: rest.width, height: rest.height, svgText: text, iconName }, position);
         } catch (err) {
           console.warn('Failed to load svg icon, fallback original href', err);
-          addShape('image', { href, width: rest.width, height: rest.height }, position);
+          addShape('image', { href, width: rest.width, height: rest.height, iconName }, position);
         }
       })();
     } else {
-      addShape('image', { href, width: rest.width, height: rest.height }, position);
+      addShape('image', { href, width: rest.width, height: rest.height, iconName }, position);
     }
   }, [addShape, decodeDataUri, toDataUri]);
 
@@ -1135,7 +1160,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     });
 
     const finalShapes = [...updatedShapes, newShape];
-    setShapes(finalShapes);
+    setShapesState(() => finalShapes);
     
     // 清理临时线
     if (tempLine) {
@@ -1243,7 +1268,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           shape.element.setAttribute('points', newPoints);
           shape.data.points = newPoints;
           const updatedShapes = shapes.map(s => s.id === shape.id ? { ...shape, data: { ...shape.data }, element: shape.element } : s);
-          setShapes(updatedShapes);
+          setShapesState(() => updatedShapes);
           setDragStart({ x, y });
         }
       }
@@ -1288,7 +1313,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           }
         });
 
-        setShapes(nextShapes);
+        setShapesState(() => nextShapes);
       }
       
       setDragStart({ x, y });
@@ -1349,7 +1374,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           };
           
           const nextShapes = shapes.map(s => s.id === shape.id ? updatedShape : s);
-          setShapes(nextShapes);
+          setShapesState(() => nextShapes);
           
           // 更新拖拽状态，使用当前的圆角值
           setDraggingCornerHandle({
@@ -1383,7 +1408,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
               updateConnectionLine(connLine, shape.id, nextShapes);
             }
           });
-          setShapes(nextShapes);
+          setShapesState(() => nextShapes);
         }
       }
       
@@ -1514,7 +1539,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         showConnectorHandles(edge);
 
         const finalShapes = updatedShapes.map(shape => shape.id === connectorId ? edge : shape);
-        setShapes(finalShapes);
+        setShapesState(() => finalShapes);
         setSelectedShape(connectorId);
         onShapeSelect?.(edge.element);
         saveToHistory(finalShapes, selectedIds);
@@ -1750,7 +1775,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       }
     });
 
-    setShapes(updatedShapes);
+    setShapesState(() => updatedShapes);
     setSelectedIds(new Set());
     setHoveredShapeId(null);
     onShapeSelect?.(null);
@@ -1768,7 +1793,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     while (svgRef.current.firstChild) {
       svgRef.current.removeChild(svgRef.current.firstChild);
     }
-    setShapes([]);
+    setShapesState(() => []);
     setSelectedShape(null);
     setHoveredShapeId(null);
     onShapeSelect?.(null);
@@ -1875,7 +1900,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     if (newShapes.length === 0) return;
 
     const mergedShapes = [...shapes, ...newShapes];
-    setShapes(mergedShapes);
+    setShapesState(() => mergedShapes);
     const newIds = newShapes.map(s => s.id);
     setSelectedIds(new Set(newIds));
     copyBufferRef.current = newIds;
@@ -1891,7 +1916,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
 
     svgRef.current.appendChild(target.element);
     const reordered = [...shapes.filter(shape => shape.id !== selectedShape), target];
-    setShapes(reordered);
+    setShapesState(() => reordered);
     saveToHistory(reordered, selectedIds);
   }, [saveToHistory, selectedIds, selectedShape, shapes]);
 
@@ -1905,7 +1930,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       svgRef.current.insertBefore(target.element, firstChild);
     }
     const reordered = [target, ...shapes.filter(shape => shape.id !== selectedShape)];
-    setShapes(reordered);
+    setShapesState(() => reordered);
     saveToHistory(reordered, selectedIds);
   }, [saveToHistory, selectedIds, selectedShape, shapes]);
 
@@ -1926,8 +1951,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
 
   const changeSelectedFill = useCallback((color: string) => {
     const targetIds = selectedIdsRef.current.size ? selectedIdsRef.current : selectedIds;
-    if (targetIds.size === 0) return;
-    const updatedShapes = shapes.map(shape => {
+    if (targetIds.size === 0) {
+      console.warn('[changeSelectedFill] no targets', { selectedIds: Array.from(selectedIds) });
+      return;
+    }
+    const currentShapes = shapesRef.current;
+    console.log('[changeSelectedFill] apply', { color, targetCount: targetIds.size, targetIds: Array.from(targetIds), shapesCount: currentShapes.length });
+    const updatedShapes = currentShapes.map(shape => {
       if (!targetIds.has(shape.id)) return shape;
       const nextShape = { ...shape, data: { ...shape.data } };
       nextShape.data.fill = color;
@@ -1935,6 +1965,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         nextShape.element.setAttribute('fill', 'none');
       } else if (nextShape.type === 'image') {
         const originalSvg = nextShape.data.originalSvgText || decodeDataUri(nextShape.data.originalHref || nextShape.data.href || '');
+        console.log('[changeSelectedFill:image] start', {
+          shapeId: nextShape.id,
+          iconName: nextShape.data.iconName,
+          color,
+          hasOriginalSvg: !!nextShape.data.originalSvgText,
+          decodedLen: originalSvg?.length ?? 0,
+        });
         if (originalSvg) {
           const tintedText = tintSvgText(originalSvg, color);
           const tintedUri = toDataUri(tintedText);
@@ -1942,6 +1979,9 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
             nextShape.data.href = tintedUri;
             (nextShape.element as SVGImageElement).setAttribute('href', tintedUri);
             (nextShape.element as SVGImageElement).setAttributeNS('http://www.w3.org/1999/xlink', 'href', tintedUri);
+            console.log('[changeSelectedFill:image] applied tintedUri', { tintedUriLength: tintedUri.length });
+          } else {
+            console.warn('[changeSelectedFill:image] toDataUri empty');
           }
         } else {
           const href = nextShape.data.originalHref || nextShape.data.href || '';
@@ -1949,15 +1989,17 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           nextShape.data.href = tinted;
           (nextShape.element as SVGImageElement).setAttribute('href', tinted);
           (nextShape.element as SVGImageElement).setAttributeNS('http://www.w3.org/1999/xlink', 'href', tinted);
+          console.log('[changeSelectedFill:image] fallback tintDataUri applied', { tintedLength: tinted.length });
         }
       } else {
         nextShape.element.setAttribute('fill', color);
       }
       return nextShape;
     });
-    setShapes(updatedShapes);
+    setShapesState(() => updatedShapes);
+    console.log('[changeSelectedFill] shapes updated, saving history');
     saveToHistory(updatedShapes, targetIds);
-  }, [decodeDataUri, saveToHistory, selectedIds, shapes, tintDataUri, tintSvgText, toDataUri]);
+  }, [decodeDataUri, saveToHistory, selectedIds, tintDataUri, tintSvgText, toDataUri]);
 
   const changeSelectedStroke = useCallback((color: string) => {
     const targetIds = selectedIdsRef.current.size ? selectedIdsRef.current : selectedIds;
@@ -1968,7 +2010,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       nextShape.element.setAttribute('stroke', color);
       return nextShape;
     });
-    setShapes(updatedShapes);
+    setShapesState(() => updatedShapes);
     saveToHistory(updatedShapes, targetIds);
   }, [saveToHistory, selectedIds, shapes]);
 
@@ -1981,7 +2023,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       nextShape.element.setAttribute('stroke-width', String(width));
       return nextShape;
     });
-    setShapes(updatedShapes);
+    setShapesState(() => updatedShapes);
     saveToHistory(updatedShapes, targetIds);
   }, [saveToHistory, selectedIds, shapes]);
 
@@ -1995,7 +2037,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       nextShape.element.setAttribute('opacity', String(safeOpacity));
       return nextShape;
     });
-    setShapes(updatedShapes);
+    setShapesState(() => updatedShapes);
     saveToHistory(updatedShapes, targetIds);
   }, [saveToHistory, selectedIds, shapes]);
 
