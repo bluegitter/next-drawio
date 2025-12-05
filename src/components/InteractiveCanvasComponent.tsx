@@ -281,24 +281,23 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   }, [getDef]);
 
   const groupSelectionBounds = useMemo(() => {
-    if (!svgRef.current || selectedIds.size <= 1) return null;
+    if (selectedIds.size <= 1) return null;
     // 仅当当前选中图元共享同一 groupId 时显示组合外框
     const selectedShapes = shapes.filter(s => selectedIds.has(s.id));
     const groupIds = new Set(selectedShapes.map(s => s.data.groupId).filter(Boolean) as string[]);
     if (groupIds.size !== 1) return null;
 
-    const svgRect = svgRef.current.getBoundingClientRect();
     let minX = Number.POSITIVE_INFINITY;
     let minY = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
     let maxY = Number.NEGATIVE_INFINITY;
 
     selectedShapes.forEach(shape => {
-      const rect = shape.element.getBoundingClientRect();
-      minX = Math.min(minX, rect.left - svgRect.left);
-      minY = Math.min(minY, rect.top - svgRect.top);
-      maxX = Math.max(maxX, rect.right - svgRect.left);
-      maxY = Math.max(maxY, rect.bottom - svgRect.top);
+      const b = getShapeBounds(shape);
+      minX = Math.min(minX, b.minX);
+      minY = Math.min(minY, b.minY);
+      maxX = Math.max(maxX, b.maxX);
+      maxY = Math.max(maxY, b.maxY);
     });
 
     if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) return null;
@@ -309,7 +308,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       w: (maxX - minX) + padding * 2,
       h: (maxY - minY) + padding * 2,
     };
-  }, [selectedIds, shapes]);
+  }, [getShapeBounds, selectedIds, shapes]);
 
   const polylineHandles = useMemo(() => {
     const handles: Array<{ shapeId: string; index: number; x: number; y: number }> = [];
@@ -1541,6 +1540,15 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
 
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    // 右键点击时保持当前选择，不打断框选/多选
+    if (e.button === 2) {
+      if (selectedIds.size === 0) {
+        setSelectedIds(new Set([shape.id]));
+        onShapeSelect?.(shape.element);
+      }
+      return;
+    }
 
     if (isConnecting) {
       if (!connectionStart) {

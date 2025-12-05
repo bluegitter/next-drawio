@@ -43,6 +43,7 @@ export default function Home() {
   const [selectedShape, setSelectedShape] = useState<SVGElement | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean }>({ x: 0, y: 0, open: false });
   const canvasRef = useRef<CanvasComponentRef | null>(null);
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
 
@@ -210,6 +211,15 @@ export default function Home() {
       refreshHistoryState();
     }
   }, [refreshHistoryState]);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(prev => ({ ...prev, open: false }));
+  }, []);
+
+  const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, open: true });
+  }, []);
 
   const menuData = [
     {
@@ -645,7 +655,10 @@ export default function Home() {
         </div>
 
         {/* 画布区 */}
-        <div className="flex-1 bg-[#eaeaea] overflow-auto flex justify-center items-start p-4">
+        <div
+          className="flex-1 bg-[#eaeaea] overflow-auto flex justify-center items-start p-4"
+          onContextMenu={handleCanvasContextMenu}
+        >
           <div
             className="relative"
             style={{
@@ -734,6 +747,44 @@ export default function Home() {
         <div className="text-gray-500">画布: {canvasWidth} × {canvasHeight}px · 当前工具: {currentTool}</div>
         <div className="text-gray-500">支持网格、对齐、自由绘制</div>
       </div>
+
+      {/* 右键菜单 */}
+      {contextMenu.open && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={closeContextMenu}
+            onContextMenu={(e) => { e.preventDefault(); closeContextMenu(); }}
+          />
+          <div
+            className="fixed z-50 bg-white border border-gray-200 rounded shadow-lg min-w-[180px] text-sm text-gray-700"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            {[
+              { label: '删除', danger: true, action: handleDelete },
+              'divider',
+              { label: '复制', action: handleDuplicate },
+              { label: '创建副本', action: handleDuplicate },
+              'divider',
+              { label: '组合', action: () => { canvasMethodsRef.current?.combineSelected(); refreshHistoryState(); } },
+              { label: '取消组合', action: () => { canvasMethodsRef.current?.ungroupSelected(); refreshHistoryState(); } },
+            ].map((item, idx) => {
+              if (item === 'divider') {
+                return <div key={`divider-${idx}`} className="border-t border-gray-100 my-1" />;
+              }
+              return (
+                <button
+                  key={item.label}
+                  className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${item.danger ? 'text-red-600 font-semibold' : ''}`}
+                  onClick={() => { item.action?.(); closeContextMenu(); }}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
