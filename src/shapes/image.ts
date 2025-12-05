@@ -69,6 +69,38 @@ const resolvePortBuilder = (shape: any) => {
   return null;
 };
 
+const applyTransformToPorts = (
+  shape: any,
+  ports: PortPoint[]
+): PortPoint[] => {
+  const { x = 0, y = 0, width = 0, height = 0, rotation = 0, scale = 1, flipX = false, flipY = false } = shape.data || {};
+  const cx = x + width / 2;
+  const cy = y + height / 2;
+
+  const rad = (rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const sx = scale * (flipX ? -1 : 1);
+  const sy = scale * (flipY ? -1 : 1);
+
+  return ports.map(port => {
+    const dx = port.x - cx;
+    const dy = port.y - cy;
+
+    // 先应用翻转+缩放，再旋转
+    const scaledX = dx * sx;
+    const scaledY = dy * sy;
+    const rx = scaledX * cos - scaledY * sin;
+    const ry = scaledX * sin + scaledY * cos;
+
+    return {
+      ...port,
+      x: cx + rx,
+      y: cy + ry,
+    };
+  });
+};
+
 export const imageShape: ShapeDefinition = {
   type: 'image',
   create: (ctx: ShapeContext, options?: { href?: string; width?: number; height?: number; svgText?: string; iconName?: string }) => {
@@ -211,13 +243,15 @@ export const imageShape: ShapeDefinition = {
   getPorts: (shape) => {
     const { x = 0, y = 0, width = 0, height = 0 } = shape.data;
     const builder = resolvePortBuilder(shape);
-    if (builder) return builder({ x, y, width, height, shapeId: shape.id });
+    const basePorts = builder
+      ? builder({ x, y, width, height, shapeId: shape.id })
+      : [
+        { id: `${shape.id}-port-top`, x: x + width / 2, y, position: 'top' },
+        { id: `${shape.id}-port-right`, x: x + width, y: y + height / 2, position: 'right' },
+        { id: `${shape.id}-port-bottom`, x: x + width / 2, y: y + height, position: 'bottom' },
+        { id: `${shape.id}-port-left`, x, y: y + height / 2, position: 'left' },
+      ];
 
-    return [
-      { id: `${shape.id}-port-top`, x: x + width / 2, y, position: 'top' },
-      { id: `${shape.id}-port-right`, x: x + width, y: y + height / 2, position: 'right' },
-      { id: `${shape.id}-port-bottom`, x: x + width / 2, y: y + height, position: 'bottom' },
-      { id: `${shape.id}-port-left`, x, y: y + height / 2, position: 'left' },
-    ];
+    return applyTransformToPorts(shape, basePorts);
   },
 };
