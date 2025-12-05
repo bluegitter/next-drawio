@@ -25,6 +25,8 @@ export interface CanvasComponentRef {
   bringToFront: () => void;
   sendToBack: () => void;
   rotateSelected: (angle: number) => void;
+  flipSelectedHorizontal: () => void;
+  flipSelectedVertical: () => void;
   scaleSelected: (scale: number) => void;
   changeSelectedFill: (color: string) => void;
   changeSelectedStroke: (color: string) => void;
@@ -79,6 +81,8 @@ interface SVGShape {
     strokeWidth: number;
     rotation: number;
     scale: number;
+    flipX?: boolean;
+    flipY?: boolean;
     opacity: number;
   };
   connections?: Array<string | null>; // 连接到的图形ID
@@ -753,8 +757,10 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const applyTransform = useCallback((shape: SVGShape) => {
     const rotation = shape.data.rotation || 0;
     const scale = shape.data.scale || 1;
+    const flipX = shape.data.flipX ? -1 : 1;
+    const flipY = shape.data.flipY ? -1 : 1;
 
-    if (rotation === 0 && scale === 1) {
+    if (rotation === 0 && scale === 1 && !shape.data.flipX && !shape.data.flipY) {
       shape.element.removeAttribute('transform');
       return;
     }
@@ -763,7 +769,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const transforms = [
       `translate(${center.x} ${center.y})`,
       rotation !== 0 ? `rotate(${rotation})` : null,
-      scale !== 1 ? `scale(${scale})` : null,
+      (scale !== 1 || flipX !== 1 || flipY !== 1) ? `scale(${scale * flipX} ${scale * flipY})` : null,
       `translate(${-center.x} ${-center.y})`,
     ].filter((value): value is string => Boolean(value));
 
@@ -918,18 +924,29 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   }, [onShapeSelect]);
 
   const updateSelectedShape = useCallback((updater: (shape: SVGShape) => void, options?: { skipHistory?: boolean }) => {
-    if (!selectedShape) return;
-    const shapeIndex = shapes.findIndex(s => s.id === selectedShape);
-    if (shapeIndex === -1) return;
+    const targetIds = selectedIdsRef.current;
+    if (!targetIds.size) return;
 
-    const updatedShapes = [...shapes];
-    updater(updatedShapes[shapeIndex]);
+    const currentShapes = shapesRef.current.length ? shapesRef.current : shapes;
+    const updatedShapes = currentShapes.map(shape => {
+      if (targetIds.has(shape.id)) {
+        const cloned = { ...shape, data: { ...shape.data } };
+        updater(cloned);
+        return cloned;
+      }
+      return shape;
+    });
+
+    // 检查是否有实际变更（简单比较引用）
+    const changed = updatedShapes.some((s, idx) => s !== currentShapes[idx]);
+    if (!changed) return;
+
     setShapesState(() => updatedShapes);
 
     if (!options?.skipHistory) {
-      saveToHistory(updatedShapes, selectedIds);
+      saveToHistory(updatedShapes, targetIds);
     }
-  }, [saveToHistory, selectedIds, selectedShape, shapes]);
+  }, [saveToHistory, shapes]);
 
   const combineSelected = useCallback(() => {
     const currentSel = selectedIdsRef.current;
@@ -1915,6 +1932,20 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     });
   }, [applyTransform, updateSelectedShape]);
 
+  const flipSelectedHorizontal = useCallback(() => {
+    updateSelectedShape(shape => {
+      shape.data.flipX = !shape.data.flipX;
+      applyTransform(shape);
+    });
+  }, [applyTransform, updateSelectedShape]);
+
+  const flipSelectedVertical = useCallback(() => {
+    updateSelectedShape(shape => {
+      shape.data.flipY = !shape.data.flipY;
+      applyTransform(shape);
+    });
+  }, [applyTransform, updateSelectedShape]);
+
   const scaleSelected = useCallback((scale: number) => {
     const safeScale = Math.max(0.1, scale);
     updateSelectedShape(shape => {
@@ -2363,6 +2394,8 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     bringToFront,
     sendToBack,
     rotateSelected,
+    flipSelectedHorizontal,
+    flipSelectedVertical,
     scaleSelected,
     changeSelectedFill,
     changeSelectedStroke,

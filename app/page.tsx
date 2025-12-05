@@ -31,6 +31,10 @@ import {
   ChevronDown,
   ChevronRight,
   Search,
+  FlipHorizontal,
+  FlipVertical,
+  RotateCcw,
+  RotateCw,
 } from 'lucide-react';
 import './globals.css';
 
@@ -195,6 +199,34 @@ export default function Home() {
   const handleSendToBack = useCallback(() => {
     if (canvasMethodsRef.current) {
       canvasMethodsRef.current.sendToBack();
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleRotateLeft = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.rotateSelected(-90);
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleRotateRight = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.rotateSelected(90);
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleFlipHorizontal = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.flipSelectedHorizontal();
+      refreshHistoryState();
+    }
+  }, [refreshHistoryState]);
+
+  const handleFlipVertical = useCallback(() => {
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.flipSelectedVertical();
       refreshHistoryState();
     }
   }, [refreshHistoryState]);
@@ -536,6 +568,40 @@ export default function Home() {
         >
           <Redo2 size={18} />
         </button>
+
+        <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        {/* 旋转 / 翻转 */}
+        <div className="flex items-center gap-1">
+          <button
+            className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+            title="左旋转 90°"
+            onClick={handleRotateLeft}
+          >
+            <RotateCcw size={18} />
+          </button>
+          <button
+            className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+            title="右旋转 90°"
+            onClick={handleRotateRight}
+          >
+            <RotateCw size={18} />
+          </button>
+          <button
+            className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+            title="水平翻转"
+            onClick={handleFlipHorizontal}
+          >
+            <FlipHorizontal size={18} />
+          </button>
+          <button
+            className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+            title="垂直翻转"
+            onClick={handleFlipVertical}
+          >
+            <FlipVertical size={18} />
+          </button>
+        </div>
 
         <div className="w-px h-6 bg-gray-200 mx-1" />
 
