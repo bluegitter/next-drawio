@@ -2,56 +2,72 @@ import { ShapeDefinition, ShapeContext, Bounds, Point } from './types';
 
 type PortPoint = { id: string; x: number; y: number; position?: string };
 
-const PRIMARY_EQUIPMENT_PORT_PRESETS: Array<{
-  keywords: string[];
-  build: (params: { x: number; y: number; width: number; height: number; shapeId: string }) => PortPoint[];
-}> = [
-  {
-    keywords: ['三圈变压器'],
-    build: ({ x, y, width, height, shapeId }) => {
-      const cx = x + width / 2.65;
-      const cy = y + height / 2;
-      return [
-        { id: `${shapeId}-port-top`, x: cx, y: y + height * 0.08, position: 'top' },
-        { id: `${shapeId}-port-right`, x: x + width * 0.77, y: cy, position: 'right' },
-        { id: `${shapeId}-port-bottom`, x: cx, y: y + height * 0.92, position: 'bottom' },
-      ];
-    },
-  },
-  {
-    // 垂直类开关设备：隔离开关、接地刀闸、断路器、刀闸开关等
-    keywords: ['隔离开关', '接地刀闸', '刀闸开关'],
-    build: ({ x, y, width, height, shapeId }) => {
-      const cx = x + width * 0.5;
-      return [
-        { id: `${shapeId}-port-top`, x: cx, y: y + height * 0.08, position: 'top' },
-        { id: `${shapeId}-port-bottom`, x: cx, y: y + height * 0.92, position: 'bottom' },
-      ];
-    },
-  },
-  {
-    // 默认的纵向双端口设备
-    keywords: ['断路器'],
-    build: ({ x, y, width, height, shapeId }) => {
-      const cx = x + width * 0.5;
-      return [
-        { id: `${shapeId}-port-left`, x: cx - width * 0.5, y: y + height * 0.5, position: 'left' },
-        { id: `${shapeId}-port-right`, x: cx + width * 0.5, y: y + height * 0.5, position: 'right' },
-      ];
-    },
-  },
-  {
-    // 默认的纵向双端口设备
-    keywords: ['负载开关', '开关', 'switch'],
-    build: ({ x, y, width, height, shapeId }) => {
-      const cx = x + width * 0.5;
-      return [
-        { id: `${shapeId}-port-top`, x: cx, y: y + height * 0.08, position: 'top' },
-        { id: `${shapeId}-port-bottom`, x: cx, y: y + height * 0.92, position: 'bottom' },
-      ];
-    },
-  },
-];
+const buildTransformerPorts = ({ x, y, width, height, shapeId }: { x: number; y: number; width: number; height: number; shapeId: string }): PortPoint[] => {
+  const cx = x + width / 2.65;
+  const cy = y + height / 2;
+  return [
+    { id: `${shapeId}-port-top`, x: cx - width * 0.03, y: y + height * 0.08, position: 'top' },
+    { id: `${shapeId}-port-right`, x: x + width * 0.87, y: cy, position: 'right' },
+    { id: `${shapeId}-port-bottom`, x: cx- width * 0.03, y: y + height * 0.92, position: 'bottom' },
+  ];
+};
+
+const buildVerticalTwoPorts = ({ x, y, width, height, shapeId }: { x: number; y: number; width: number; height: number; shapeId: string }): PortPoint[] => {
+  const cx = x + width * 0.5;
+  return [
+    { id: `${shapeId}-port-top`, x: cx + width * 0.08, y: y , position: 'top' },
+    { id: `${shapeId}-port-bottom`, x: cx + width * 0.08, y: y + height, position: 'bottom' },
+  ];
+};
+
+const buildHorizontalTwoPorts = ({ x, y, width, height, shapeId }: { x: number; y: number; width: number; height: number; shapeId: string }): PortPoint[] => {
+  const cy = y + height * 0.5;
+  return [
+    { id: `${shapeId}-port-left`, x: x , y: cy, position: 'left' },
+    { id: `${shapeId}-port-right`, x: x + width , y: cy, position: 'right' },
+  ];
+};
+
+const PORT_BUILDERS: Record<string, (params: { x: number; y: number; width: number; height: number; shapeId: string }) => PortPoint[]> = {
+  // 三圈变压器系列
+  '三圈变压器': buildTransformerPorts,
+  '三圈变压器-1': buildTransformerPorts,
+  '三圈变压器2': buildTransformerPorts,
+  '/icons/三圈变压器.svg': buildTransformerPorts,
+  '/icons/三圈变压器-1.svg': buildTransformerPorts,
+  '/icons/三圈变压器2.svg': buildTransformerPorts,
+
+  // 垂直类开关/隔离开关
+  '隔离开关': buildVerticalTwoPorts,
+  '隔离开关-1': buildVerticalTwoPorts,
+  '接地刀闸-分': buildVerticalTwoPorts,
+  '接地刀闸-合': buildVerticalTwoPorts,
+  '刀闸开关': buildVerticalTwoPorts,
+  '断路器': buildHorizontalTwoPorts,
+  '/icons/隔离开关.svg': buildVerticalTwoPorts,
+  '/icons/隔离开关-1.svg': buildVerticalTwoPorts,
+  '/icons/接地刀闸-分.svg': buildVerticalTwoPorts,
+  '/icons/接地刀闸-合.svg': buildVerticalTwoPorts,
+  '/icons/刀闸开关.svg': buildVerticalTwoPorts,
+  '/icons/断路器.svg': buildVerticalTwoPorts,
+
+  // 横置的端口（预留，如有横向断路器）
+  '/icons/断路器-横向.svg': buildHorizontalTwoPorts,
+};
+
+const resolvePortBuilder = (shape: any) => {
+  const keys = [
+    shape?.data?.iconName as string | undefined,
+    shape?.data?.originalHref as string | undefined,
+    shape?.data?.href as string | undefined,
+  ].filter(Boolean) as string[];
+
+  for (const k of keys) {
+    const builder = PORT_BUILDERS[k];
+    if (builder) return builder;
+  }
+  return null;
+};
 
 export const imageShape: ShapeDefinition = {
   type: 'image',
@@ -193,13 +209,9 @@ export const imageShape: ShapeDefinition = {
     };
   },
   getPorts: (shape) => {
-    const { x = 0, y = 0, width = 0, height = 0, iconName } = shape.data;
-    const keyText = `${iconName || ''}${shape.data.href || ''}`;
-
-    const preset = PRIMARY_EQUIPMENT_PORT_PRESETS.find(p => p.keywords.some(k => keyText.includes(k)));
-    if (preset) {
-      return preset.build({ x, y, width, height, shapeId: shape.id });
-    }
+    const { x = 0, y = 0, width = 0, height = 0 } = shape.data;
+    const builder = resolvePortBuilder(shape);
+    if (builder) return builder({ x, y, width, height, shapeId: shape.id });
 
     return [
       { id: `${shape.id}-port-top`, x: x + width / 2, y, position: 'top' },
