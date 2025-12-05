@@ -6,12 +6,35 @@ import { Input } from '@/components/ui/Input';
 import { EnhancedToolbar, ToolType } from '@/components/EnhancedToolbar';
 import InteractiveCanvasComponent, { CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
 import PropertyPanel from '@/components/PropertyPanel';
-import { sidebarIcons } from '@/constants/iconList';
+import { sidebarIcons, getIconUrl } from '@/constants/iconList';
+import { SHAPE_ICONS, CHECK_ICON } from '@/constants/svgIcons';
+import {
+  PanelsLeftRight,
+  LayoutTemplate,
+  ZoomIn,
+  ZoomOut,
+  Undo2,
+  Redo2,
+  Trash2,
+  MousePointerSquareDashed,
+  Clipboard,
+  ClipboardPaste,
+  PencilLine,
+  Paintbrush,
+  ArrowRight,
+  Goal,
+  Plus,
+  Copy,
+  Table2,
+  Shrink,
+  Sparkles,
+  ChevronDown,
+} from 'lucide-react';
 import './globals.css';
 
 export default function Home() {
-  const [canvasWidth, setCanvasWidth] = useState<number>(1800);
-  const [canvasHeight, setCanvasHeight] = useState<number>(900);
+  const [canvasWidth, setCanvasWidth] = useState<number>(1200);
+  const [canvasHeight, setCanvasHeight] = useState<number>(700);
   const [backgroundColor, setBackgroundColor] = useState<string>('#ffffff');
   const [currentTool, setCurrentTool] = useState<ToolType>('select');
   const [isConnecting, setIsConnecting] = useState(false);
@@ -186,6 +209,192 @@ export default function Home() {
     }
   }, [refreshHistoryState]);
 
+  const menuData = [
+    {
+      key: '文件',
+      items: [
+        { label: '新建...' },
+        { label: '从...打开', children: [{ label: '本地文件' }, { label: 'URL' }] },
+        { label: '打开最近使用的文件', children: [{ label: '最近文件1' }, { label: '最近文件2' }] },
+        'divider',
+        { label: '保存', shortcut: '⌘+S' },
+        { label: '另存为...', shortcut: '⌘+⇧+S' },
+        'divider',
+        { label: '共享...' },
+        'divider',
+        { label: '重命名...' },
+        { label: '创建副本...' },
+        'divider',
+        { label: '从...导入', children: [{ label: 'SVG' }, { label: 'PNG' }] },
+        { label: '导出为', children: [{ label: 'PNG' }, { label: 'SVG' }, { label: 'PDF' }] },
+        'divider',
+        { label: '嵌入', children: [{ label: 'HTML' }, { label: 'Iframe' }] },
+        { label: '发布', children: [{ label: '链接' }, { label: '图像' }] },
+        'divider',
+        { label: '新增库', children: [{ label: '新建库' }, { label: '导入库' }] },
+        { label: '从...打开库', children: [{ label: '本地库' }, { label: 'URL 库' }] },
+        'divider',
+        { label: '属性...' },
+        'divider',
+        { label: '页面设置...' },
+        { label: '打印...', shortcut: '⌘+P' },
+        'divider',
+        { label: '关闭' },
+      ],
+    },
+    {
+      key: '编辑',
+      items: [
+        { label: '撤销', shortcut: '⌘+Z' },
+        { label: '重做', shortcut: '⌘+⇧+Z', disabled: true },
+        'divider',
+        { label: '剪切', shortcut: '⌘+X', disabled: true },
+        { label: '复制', shortcut: '⌘+C', disabled: true },
+        { label: '复制为图像', shortcut: '⌘+⌥+X' },
+        { label: '复制为 SVG', shortcut: '⌘+⌥+⇧+X' },
+        { label: '粘贴', shortcut: '⌘+V' },
+        { label: '删除', disabled: true },
+        { label: '创建副本', shortcut: '⌘+D', disabled: true },
+        'divider',
+        { label: '查找/替换', shortcut: '⌘+F' },
+        { label: '编辑数据...', shortcut: '⌘+M' },
+        'divider',
+        { label: '选择顶点', shortcut: '⌘+⇧+I' },
+        { label: '选择边线', shortcut: '⌘+⇧+E' },
+        { label: '全选', shortcut: '⌘+A' },
+        { label: '全不选', shortcut: '⌘+⇧+A' },
+      ],
+    },
+    {
+      key: '查看',
+      items: [
+        { label: '格式', shortcut: '⌘+⇧+P', checked: true },
+        { label: '缩略图', shortcut: '⌘+⇧+O' },
+        { label: '图层', shortcut: '⌘+⇧+L' },
+        { label: '标签', shortcut: '⌘+K' },
+        'divider',
+        { label: '搜索图形' },
+        { label: '便笺本', checked: true },
+        { label: '形状', checked: true, shortcut: '⌘+⇧+K' },
+        'divider',
+        { label: '页面视图', checked: true },
+        { label: '页面标签', checked: true },
+        { label: '标尺' },
+        'divider',
+        { label: '提示', checked: true },
+        { label: '动画', checked: true },
+        'divider',
+        { label: '网格', checked: true, shortcut: '⌘+⇧+G' },
+        { label: '参考线', checked: true },
+        { label: '连接箭头', shortcut: '⌥+⇧+A' },
+        { label: '连接点', shortcut: '⌥+⇧+O' },
+        'divider',
+        { label: '重置视图', shortcut: 'Enter/Home' },
+        { label: '放大', shortcut: '⌘ + / Alt+Mousewheel' },
+        { label: '缩小', shortcut: '⌘ - / Alt+Mousewheel' },
+        { label: '全屏' },
+      ],
+    },
+    {
+      key: '调整图形',
+      items: [
+        { label: '移至最前', shortcut: '⌘+⇧+F', disabled: true },
+        { label: '移至最后', shortcut: '⌘+⇧+B', disabled: true },
+        { label: '上移一层', shortcut: '⌘+Alt+Shift+F', disabled: true },
+        { label: '下移一层', shortcut: '⌘+Alt+Shift+B', disabled: true },
+        'divider',
+        { label: '方向', children: [{ label: '水平' }, { label: '垂直' }], disabled: true },
+        { label: '旋转90°/翻转', shortcut: '⌘+R', disabled: true },
+        { label: '对齐', children: [{ label: '左对齐' }, { label: '居中' }], disabled: true },
+        { label: '等距分布', disabled: true },
+        'divider',
+        { label: '导航' },
+        { label: '插入', children: [{ label: '连接' }, { label: '图形' }] },
+        { label: '布局', children: [{ label: '自动布局' }, { label: '层次布局' }] },
+        'divider',
+        { label: '组合', shortcut: '⌘+G', disabled: true },
+        { label: '取消组合', shortcut: '⌘+⇧+U', disabled: true },
+        { label: '移出组合', disabled: true },
+        'divider',
+        { label: '清除航点', shortcut: '⌥+⇧+R', disabled: true },
+        { label: '自动调整', shortcut: '⌥+⇧+Y', disabled: true },
+      ],
+    },
+    {
+      key: '其它',
+      items: [
+        { label: '语言', children: [{ label: '中文' }, { label: 'English' }] },
+        { label: '外观', children: [{ label: '浅色' }, { label: '深色' }] },
+        { label: '主题', children: [{ label: '默认' }, { label: '灰色' }] },
+        'divider',
+        { label: '自适应颜色' },
+        { label: '数学排版' },
+        'divider',
+        { label: '显示开始画面', checked: true },
+        { label: '自动保存', disabled: true },
+        'divider',
+        { label: '连接时复制' },
+        { label: '折叠/展开', checked: true },
+        { label: '绘图语言', children: [{ label: '左右' }, { label: '上下' }] },
+        { label: '编辑绘图...' },
+        { label: '插件...' },
+        { label: '配置...' },
+      ],
+    },
+    {
+      key: '帮助',
+      items: [
+        { label: '快捷键...' },
+        { label: '快速入门视频...' },
+        { label: '获取桌面版...' },
+        { label: '支持...' },
+        'divider',
+        { label: 'v29.2.3', disabled: true },
+      ],
+    },
+  ];
+
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [openSub, setOpenSub] = useState<string | null>(null);
+
+  const renderMenu = (items: any[], isSub?: boolean) => (
+    <div
+      className="absolute z-50 bg-white border border-gray-200 rounded shadow-lg py-1"
+      style={{ minWidth: 220, marginTop: isSub ? -24 : 0, marginLeft: isSub ? 200 : 0, fontFamily: 'Arial', fontSize: 14 }}
+      onMouseLeave={() => isSub && setOpenSub(null)}
+    >
+      {items.map((item, idx) => {
+        if (item === 'divider') {
+          return <div key={idx} className="my-1 border-t border-gray-200" />;
+        }
+        const disabled = item.disabled;
+        const hasChildren = !!item.children;
+        return (
+          <div
+            key={item.label}
+            className={`px-3 py-2 grid grid-cols-[20px_1fr_auto] items-center text-sm ${
+              disabled ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'
+            }`}
+            onMouseEnter={() => hasChildren && setOpenSub(item.label)}
+            style={{ fontFamily: 'Arial', fontSize: 14 }}
+          >
+            <div className="flex justify-center">
+              {item.checked && <img src={CHECK_ICON} alt="checked" className="w-4 h-3" />}
+            </div>
+            <div className="flex items-center gap-1">
+              <span>{item.label}</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-400 text-xs">
+              {item.shortcut && <span>{item.shortcut}</span>}
+              {hasChildren && <span>▶</span>}
+            </div>
+            {hasChildren && openSub === item.label && renderMenu(item.children, true)}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col text-sm text-gray-700">
       {/* 顶部菜单栏 */}
@@ -193,9 +402,26 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#f7c266] rounded flex items-center justify-center text-white font-bold">IO</div>
           <span className="font-medium text-gray-800">未命名绘图</span>
-          <div className="flex items-center gap-4 text-gray-600">
-            {['文件','编辑','查看','调整图形','其它','帮助'].map(item => (
-              <button key={item} className="hover:text-gray-800">{item}</button>
+          <div className="flex items-center gap-1 text-gray-600 relative">
+            {menuData.map(menu => (
+              <div key={menu.key} className="relative">
+                <button
+                  className={`px-3 py-2 rounded ${openMenu === menu.key ? 'bg-gray-200 text-gray-900' : 'hover:text-gray-800'}`}
+                  onMouseEnter={() => { setOpenMenu(menu.key); setOpenSub(null); }}
+                  onMouseLeave={() => { /* keep open until leave container */ }}
+                  onClick={() => setOpenMenu(openMenu === menu.key ? null : menu.key)}
+                >
+                  {menu.key}
+                </button>
+                {openMenu === menu.key && (
+                  <div
+                    className="absolute left-0 top-full mt-1"
+                    onMouseLeave={() => { setOpenMenu(null); setOpenSub(null); }}
+                  >
+                    {renderMenu(menu.items)}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
           <div className="ml-4 px-3 py-1 bg-[#fce7e7] text-[#c24141] border border-[#f2bebe] rounded text-xs">
@@ -208,19 +434,103 @@ export default function Home() {
       </div>
 
       {/* 工具栏 */}
-      <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-3 text-base">
-        <span className="text-gray-500 cursor-pointer">◻</span>
-        <span className="text-gray-500 cursor-pointer">☰</span>
-        <select className="border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none">
-          <option>100%</option>
-          <option>75%</option>
-          <option>50%</option>
-        </select>
-        <div className="flex items-center gap-3 text-gray-600">
-          {['↺','↻','◴','🖨','🖉','✏','✂','◌','↦','☐','＋','☐','▦','✶'].map((t, i) => (
-            <button key={i} className="hover:text-gray-800">{t}</button>
-          ))}
+      <div className="h-12 bg-[#f8f9fa] border-b border-gray-200 flex items-center px-4 gap-2 text-base">
+        {[
+          { icon: <PanelsLeftRight size={18} />, label: '折叠边栏' },
+          { icon: <LayoutTemplate size={18} />, label: '页面标签' },
+        ].map((item, idx) => (
+          <button
+            key={idx}
+            className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+            title={item.label}
+          >
+            {item.icon}
+          </button>
+        ))}
+
+        <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        <div className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer text-gray-700 text-sm">
+          <span className="font-medium">{'100%'}</span>
+          <ChevronDown size={14} />
         </div>
+
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="放大">
+          <ZoomIn size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="缩小">
+          <ZoomOut size={18} />
+        </button>
+
+        <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        <button
+          className={`h-9 w-9 flex items-center justify-center rounded ${canUndo ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
+          onClick={handleUndo}
+          disabled={!canUndo}
+          title="撤销"
+        >
+          <Undo2 size={18} />
+        </button>
+        <button
+          className={`h-9 w-9 flex items-center justify-center rounded ${canRedo ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
+          onClick={handleRedo}
+          disabled={!canRedo}
+          title="重做"
+        >
+          <Redo2 size={18} />
+        </button>
+
+        <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="删除">
+          <Trash2 size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="框选">
+          <MousePointerSquareDashed size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="粘贴样式">
+          <Clipboard size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="粘贴">
+          <ClipboardPaste size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="编辑">
+          <PencilLine size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="填充">
+          <Paintbrush size={18} />
+        </button>
+
+        <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="直连">
+          <ArrowRight size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="折线路径">
+          <Goal size={18} />
+        </button>
+
+        <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="添加">
+          <Plus size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="复制">
+          <Copy size={18} />
+        </button>
+
+        <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="表格">
+          <Table2 size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="轨迹">
+          <Shrink size={18} />
+        </button>
+        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="效果">
+          <Sparkles size={18} />
+        </button>
       </div>
 
       {/* 主体区域 */}
@@ -237,22 +547,23 @@ export default function Home() {
           <div className="text-xs font-semibold text-gray-500 px-2 py-2 border-b">便捷本</div>
           <div className="grid grid-cols-4 gap-2 px-2 py-2">
               {[
-                { key: 'rectangle', label: '▭' },
-                { key: 'roundedRect', label: '▢' },
-                { key: 'circle', label: '◯' },
-                { key: 'triangle', label: '△' },
-                { key: 'line', label: '／' },
-                { key: 'polyline', label: '⎍' },
-                { key: 'text', label: 'T' },
-                { key: 'connect', label: '↔' },
+                { key: 'rectangle', label: '矩形' },
+                { key: 'roundedRect', label: '圆角矩形' },
+                { key: 'circle', label: '圆形' },
+                { key: 'triangle', label: '三角形' },
+                { key: 'line', label: '直线' },
+                { key: 'polyline', label: '折线' },
+                { key: 'text', label: '文本' },
+                { key: 'connect', label: '连接' },
               ].map(item => (
                 <button
                   key={item.key}
                   onClick={() => handleToolChange(item.key as ToolType)}
-                  className="h-12 border border-gray-200 rounded bg-white hover:border-blue-400 flex items-center justify-center text-gray-600"
+                  className="h-14 border border-gray-200 rounded bg-white hover:border-blue-400 flex flex-col items-center justify-center text-gray-600"
                   title={item.key}
                 >
-                  {item.label}
+                  <img src={SHAPE_ICONS[item.key]} alt={item.label} className="w-6 h-6 mb-1" />
+                  <span className="text-[11px]">{item.label}</span>
                 </button>
               ))}
             </div>
@@ -301,10 +612,10 @@ export default function Home() {
                 <button
                   key={icon.name}
                   className="flex flex-col items-center gap-1 border border-gray-200 rounded p-2 hover:border-blue-400 hover:shadow-sm transition bg-white"
-                  onClick={() => canvasMethodsRef.current?.addSvgIcon(icon.src, { width: 80, height: 60 })}
+                  onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60 })}
                   title={icon.name}
                 >
-                  <img src={icon.src} alt={icon.name} className="w-12 h-12 object-contain" />
+                  <img src={getIconUrl(icon)} alt={icon.name} className="w-12 h-12 object-contain" />
                   <span className="text-xs text-gray-600 truncate w-full text-center">{icon.name}</span>
                 </button>
               ))}

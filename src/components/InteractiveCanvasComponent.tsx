@@ -163,6 +163,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const cornerHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
   const textSelectionRef = useRef<Map<string, SVGRectElement>>(new Map());
   const copyBufferRef = useRef<string[]>([]);
+  const [draggingPolylinePoint, setDraggingPolylinePoint] = useState<{ shapeId: string; index: number } | null>(null);
   const [draggingCornerHandle, setDraggingCornerHandle] = useState<{
     shapeId: string;
     handleType: string;
@@ -308,6 +309,20 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       w: (maxX - minX) + padding * 2,
       h: (maxY - minY) + padding * 2,
     };
+  }, [selectedIds, shapes]);
+
+  const polylineHandles = useMemo(() => {
+    const handles: Array<{ shapeId: string; index: number; x: number; y: number }> = [];
+    selectedIds.forEach(id => {
+      const shape = shapes.find(s => s.id === id);
+      if (shape && shape.type === 'polyline' && shape.data.points) {
+        const pts = shape.data.points.split(' ').map(p => p.split(',').map(Number));
+        pts.forEach(([px, py], idx) => {
+          handles.push({ shapeId: id, index: idx, x: px, y: py });
+        });
+      }
+    });
+    return handles;
   }, [selectedIds, shapes]);
 
   const getBounds = useCallback((shape: SVGShape) => {
@@ -1131,6 +1146,23 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           }
         }
       }
+    } else if (draggingPolylinePoint) {
+      const { shapeId, index } = draggingPolylinePoint;
+      const shape = shapes.find(s => s.id === shapeId);
+      if (shape && shape.type === 'polyline') {
+        const pts = shape.data.points?.split(' ').map((p: string) => p.split(',').map(Number)) || [];
+        if (pts[index]) {
+          const dx = x - dragStart.x;
+          const dy = y - dragStart.y;
+          pts[index] = [pts[index][0] + dx, pts[index][1] + dy];
+          const newPoints = pts.map(([px, py]) => `${px},${py}`).join(' ');
+          shape.element.setAttribute('points', newPoints);
+          shape.data.points = newPoints;
+          const updatedShapes = shapes.map(s => s.id === shape.id ? { ...shape, data: { ...shape.data }, element: shape.element } : s);
+          setShapes(updatedShapes);
+          setDragStart({ x, y });
+        }
+      }
     } else if (isConnecting && tempLine && connectionStart) {
       // 更新临时连接线
       const fromShapeObj = shapes.find(s => s.id === connectionStart);
@@ -1426,6 +1458,11 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       finalizeHandleConnection(e.target as SVGElement, { x: lastPointerRef.current.x, y: lastPointerRef.current.y });
       return;
     }
+    if (draggingPolylinePoint) {
+      saveToHistory();
+      setDraggingPolylinePoint(null);
+      return;
+    }
 
     if (isConnecting && connectionStart) {
       const target = e.target as SVGElement;
@@ -1489,12 +1526,10 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
-    setDraggingCornerHandle(null);
-    setDragStart({ x: 0, y: 0 });
-    // 取消组合时清理 group 选框偏移
-    if (selectionRect) {
-      setSelectionRect(null);
-    }
+      setDraggingCornerHandle(null);
+      setDragStart({ x: 0, y: 0 });
+    // 清理框选态
+    setSelectionRect(null);
   }, [connectShapes, connectionStart, connectionStartPort, getShapeBounds, isConnecting, isDragging, isResizing, isSelectingBox, onShapeSelect, saveToHistory, selectionRect, setSelectedShape, setSelectedShapes, shapes, tempLine]);
 
   // 图形鼠标按下事件处理
@@ -2306,6 +2341,23 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           </div>
         </div>
       )}
+      {polylineHandles.map(handle => (
+        <div
+          key={`${handle.shapeId}-${handle.index}`}
+          className="absolute w-3 h-3 bg-[#36a7ff] rounded-full border-2 border-white cursor-move"
+          style={{
+            left: handle.x - 6,
+            top: handle.y - 6,
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            const rect = svgRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            setDraggingPolylinePoint({ shapeId: handle.shapeId, index: handle.index });
+            setDragStart({ x: handle.x, y: handle.y });
+          }}
+        />
+      ))}
       {isConnecting && (
         <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-sm">
           连接模式 - 点击目标图形完成连接

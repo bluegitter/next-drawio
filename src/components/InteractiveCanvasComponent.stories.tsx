@@ -27,8 +27,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    width: 1800,
-    height: 900,
+    width: 1200,
+    height: 800,
     backgroundColor: '#ffffff',
   },
   render: (args) => {
@@ -61,8 +61,8 @@ export const Default: Story = {
       <div className="flex flex-col gap-4">
         <InteractiveCanvasComponent
           {...args}
-          width={args.width ?? 1800}
-          height={args.height ?? 900}
+          width={args.width ?? 1200}
+          height={args.height ?? 800}
           onReady={handleCanvasReady}
           onShapeSelect={handleShapeSelect}
           onCanvasChange={handleCanvasChange}
@@ -130,16 +130,16 @@ export const SmallCanvas: Story = {
 
 export const LargeCanvas: Story = {
   args: {
-    width: 1400,
-    height: 900,
+    width: 1200,
+    height: 800,
     backgroundColor: '#ffffff',
   },
 };
 
 export const DarkBackground: Story = {
   args: {
-    width: 1800,
-    height: 900,
+    width: 1200,
+    height: 800,
     backgroundColor: '#1f2937',
   },
   parameters: {
@@ -243,8 +243,8 @@ export const InteractiveDemo: Story = {
         
         <InteractiveCanvasComponent
           {...args}
-          width={args.width ?? 1800}
-          height={args.height ?? 900}
+          width={args.width ?? 1200}
+          height={args.height ?? 800}
           onReady={handleCanvasReady}
           onShapeSelect={handleShapeSelect}
         />

@@ -5,3 +5,5 @@ export * from './shortcuts';
 export * from './config';
 export * from './colors';
 export * from './defaults';
+export * from './svgIcons';
+export * from './iconList';
