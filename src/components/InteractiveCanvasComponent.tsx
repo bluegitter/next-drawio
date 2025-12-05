@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { shapeRegistry } from '../shapes';
+import { shapeRegistry, getPortsForShape } from '../shapes';
 import type { ShapeDefinition } from '../shapes/types';
 
 export interface CanvasComponentRef {
@@ -253,17 +253,11 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     return { x: 0, y: 0 };
   }, [getDef]);
 
-  const getPortPositions = useCallback((shape: SVGShape) => {
-    const def = getDef(shape);
-    if (def?.getPorts) return def.getPorts(shape);
-    return [];
-  }, [getDef]);
-
   const getPortPositionById = useCallback((shape: SVGShape, portId?: string | null) => {
     if (!portId) return null;
-    const ports = getPortPositions(shape);
+    const ports = getPortsForShape(shape);
     return ports.find(p => p.id === portId) || null;
-  }, [getPortPositions]);
+  }, []);
 
   // 点到线段距离
   const pointToSegmentDistance = useCallback((px: number, py: number, x1: number, y1: number, x2: number, y2: number) => {
@@ -342,7 +336,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const refreshPortsPosition = useCallback((shape: SVGShape) => {
     const ports = portElementsRef.current.get(shape.id);
     if (!ports || ports.length === 0) return;
-    const portPositions = getPortPositions(shape);
+    const portPositions = getPortsForShape(shape);
     ports.forEach(portEl => {
       const portId = portEl.getAttribute('data-port-id');
       const pos = portPositions.find(p => p.id === portId);
@@ -351,7 +345,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         portEl.setAttribute('cy', String(pos.y));
       }
     });
-  }, [getPortPositions]);
+  }, []);
 
   const resetPortStyle = useCallback((portEl: SVGElement) => {
     portEl.setAttribute('fill', '#22c55e');
@@ -664,7 +658,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const showPorts = useCallback((shape: SVGShape) => {
     if (!svgRef.current) return;
     hidePorts(shape.id);
-    const ports = getPortPositions(shape);
+    const ports = getPortsForShape(shape);
     const created: SVGElement[] = [];
 
     ports.forEach(port => {
@@ -695,7 +689,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     });
 
     portElementsRef.current.set(shape.id, created);
-  }, [createSVGElement, getPortPositions, hidePorts, startConnection]);
+  }, [createSVGElement, hidePorts, startConnection]);
 
   const hideConnectorHandles = useCallback((connectorId?: string) => {
     if (connectorId) {

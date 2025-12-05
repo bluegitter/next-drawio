@@ -1,5 +1,58 @@
 import { ShapeDefinition, ShapeContext, Bounds, Point } from './types';
 
+type PortPoint = { id: string; x: number; y: number; position?: string };
+
+const PRIMARY_EQUIPMENT_PORT_PRESETS: Array<{
+  keywords: string[];
+  build: (params: { x: number; y: number; width: number; height: number; shapeId: string }) => PortPoint[];
+}> = [
+  {
+    keywords: ['三圈变压器'],
+    build: ({ x, y, width, height, shapeId }) => {
+      const cx = x + width / 2.65;
+      const cy = y + height / 2;
+      return [
+        { id: `${shapeId}-port-top`, x: cx, y: y + height * 0.08, position: 'top' },
+        { id: `${shapeId}-port-right`, x: x + width * 0.77, y: cy, position: 'right' },
+        { id: `${shapeId}-port-bottom`, x: cx, y: y + height * 0.92, position: 'bottom' },
+      ];
+    },
+  },
+  {
+    // 垂直类开关设备：隔离开关、接地刀闸、断路器、刀闸开关等
+    keywords: ['隔离开关', '接地刀闸', '刀闸开关'],
+    build: ({ x, y, width, height, shapeId }) => {
+      const cx = x + width * 0.5;
+      return [
+        { id: `${shapeId}-port-top`, x: cx, y: y + height * 0.08, position: 'top' },
+        { id: `${shapeId}-port-bottom`, x: cx, y: y + height * 0.92, position: 'bottom' },
+      ];
+    },
+  },
+  {
+    // 默认的纵向双端口设备
+    keywords: ['断路器'],
+    build: ({ x, y, width, height, shapeId }) => {
+      const cx = x + width * 0.5;
+      return [
+        { id: `${shapeId}-port-left`, x: cx - width * 0.5, y: y + height * 0.5, position: 'left' },
+        { id: `${shapeId}-port-right`, x: cx + width * 0.5, y: y + height * 0.5, position: 'right' },
+      ];
+    },
+  },
+  {
+    // 默认的纵向双端口设备
+    keywords: ['负载开关', '开关', 'switch'],
+    build: ({ x, y, width, height, shapeId }) => {
+      const cx = x + width * 0.5;
+      return [
+        { id: `${shapeId}-port-top`, x: cx, y: y + height * 0.08, position: 'top' },
+        { id: `${shapeId}-port-bottom`, x: cx, y: y + height * 0.92, position: 'bottom' },
+      ];
+    },
+  },
+];
+
 export const imageShape: ShapeDefinition = {
   type: 'image',
   create: (ctx: ShapeContext, options?: { href?: string; width?: number; height?: number; svgText?: string; iconName?: string }) => {
@@ -141,33 +194,11 @@ export const imageShape: ShapeDefinition = {
   },
   getPorts: (shape) => {
     const { x = 0, y = 0, width = 0, height = 0, iconName } = shape.data;
+    const keyText = `${iconName || ''}${shape.data.href || ''}`;
 
-    const isTransformer =
-      iconName?.includes('三圈变压器') ||
-      (shape.data.href || '').includes('三圈变压器');
-    const isSwitch =
-      iconName?.includes('刀闸开关') ||
-      (shape.data.href || '').includes('刀闸开关');
-
-    if (isTransformer) {
-      const cx = x + width / 2.65;
-      const cy = y + height / 2;
-      const dy = height * 0.45;
-      return [
-        { id: `${shape.id}-port-top`, x: cx, y: y + height * 0.08, position: 'top' },
-        { id: `${shape.id}-port-right`, x: x + width * 0.77, y: cy, position: 'right' },
-        { id: `${shape.id}-port-bottom`, x: cx, y: y + height * 0.92, position: 'bottom' },
-      ];
-    }
-
-    if (isSwitch) {
-      const cx = x + width / 1.7;
-      const cy = y + height / 2;
-      const dy = height * 0.38;
-      return [
-        { id: `${shape.id}-port-top`, x: cx, y: cy - dy, position: 'top' },
-        { id: `${shape.id}-port-bottom`, x: cx, y: cy + dy, position: 'bottom' },
-      ];
+    const preset = PRIMARY_EQUIPMENT_PORT_PRESETS.find(p => p.keywords.some(k => keyText.includes(k)));
+    if (preset) {
+      return preset.build({ x, y, width, height, shapeId: shape.id });
     }
 
     return [
