@@ -44,6 +44,19 @@ export const sidebarIcons: SidebarIcon[] = [
   { name: '核心交换机', src: '/icons/核心交换机.svg' },
 ];
 
+// 一次设备图标
+export const primaryEquipmentIcons: SidebarIcon[] = [
+  { name: '隔离开关', src: '/icons/隔离开关.svg' },
+  { name: '隔离开关-1', src: '/icons/隔离开关-1.svg' },
+  { name: '接地刀闸-分', src: '/icons/接地刀闸-分.svg' },
+  { name: '接地刀闸-合', src: '/icons/接地刀闸-合.svg' },
+  { name: '刀闸开关', src: '/icons/刀闸开关.svg' },
+  { name: '断路器', src: '/icons/断路器.svg' },
+  { name: '三圈变压器', src: '/icons/三圈变压器.svg' },
+  { name: '三圈变压器-1', src: '/icons/三圈变压器-1.svg' },
+  { name: '三圈变压器2', src: '/icons/三圈变压器2.svg' },
+];
+
 /**
  * 获取图标URL的辅助函数
  * 优先使用SVG常量，回退到文件路径

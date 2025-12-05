@@ -7,7 +7,7 @@ import { EnhancedToolbar, ToolType } from '@/components/EnhancedToolbar';
 import InteractiveCanvasComponent, { CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
 import PropertyPanel from '@/components/PropertyPanel';
 import { SHAPE_ICONS, CHECK_ICON } from '@/constants/svgIcons';
-import { sidebarIcons, getIconUrl } from '@/constants/iconList';
+import { sidebarIcons, getIconUrl, primaryEquipmentIcons } from '@/constants/iconList';
 import {
   PanelsLeftRight,
   LayoutTemplate,
@@ -393,6 +393,7 @@ export default function Home() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     general: true,
     网络: true,
+    一次设备: true,
   });
 
   const toggleSection = useCallback((key: string) => {
@@ -640,6 +641,36 @@ export default function Home() {
               {expandedSections['网络'] && (
                 <div className="grid grid-cols-4 gap-2">
                   {sidebarIcons.map(icon => (
+                    <button
+                      key={icon.name}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/x-draw-icon', getIconUrl(icon));
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      className="h-11 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition px-1.5 py-2"
+                      onClick={() => canvasMethodsRef.current?.addSvgIcon(getIconUrl(icon), { width: 80, height: 60 })}
+                      title={icon.name}
+                    >
+                      <img src={getIconUrl(icon)} alt={icon.name} className="w-8 h-8 object-contain mb-0.5" />
+                      <span className="text-[9px] text-center leading-tight">{icon.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <button
+                className="flex items-center gap-2 text-gray-800 font-semibold text-sm mb-3 hover:text-gray-900"
+                onClick={() => toggleSection('一次设备')}
+              >
+                {expandedSections['一次设备'] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                <span>一次设备</span>
+              </button>
+              {expandedSections['一次设备'] && (
+                <div className="grid grid-cols-4 gap-2">
+                  {primaryEquipmentIcons.map(icon => (
                     <button
                       key={icon.name}
                       draggable
