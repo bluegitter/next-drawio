@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { cn } from '@/components/ui/utils';
 
 export interface PropertyPanelProps {
   selectedShape: SVGElement | null;
@@ -37,6 +38,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const [rotation, setRotation] = useState(0);
   const [scale, setScale] = useState(1);
   const [opacity, setOpacity] = useState(1);
+  const [tab, setTab] = useState<'style' | 'text' | 'shape'>('style');
+  const [fillEnabled, setFillEnabled] = useState(true);
+  const [strokeEnabled, setStrokeEnabled] = useState(true);
 
   // 从选中图形中提取属性
   useEffect(() => {
@@ -47,8 +51,13 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     const strokeWidthAttr = selectedShape.getAttribute('stroke-width') || '2';
     const opacityAttr = selectedShape.getAttribute('opacity') || '1';
 
-    setFillColor(fill === 'none' ? '#000000' : fill);
-    setStrokeColor(stroke === 'none' ? '#000000' : stroke);
+    const fillIsNone = fill === 'none';
+    const strokeIsNone = stroke === 'none';
+
+    setFillEnabled(!fillIsNone);
+    setStrokeEnabled(!strokeIsNone);
+    setFillColor(fillIsNone ? '#000000' : fill);
+    setStrokeColor(strokeIsNone ? '#000000' : stroke);
     setStrokeWidth(parseFloat(strokeWidthAttr));
     setOpacity(parseFloat(opacityAttr));
 
@@ -109,9 +118,11 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     '#ec4899', '#f43f5e', '#000000', '#6b7280', '#ffffff'
   ];
 
+  const isText = useMemo(() => selectedShape?.tagName.toLowerCase() === 'foreignobject', [selectedShape]);
+
   if (!selectedShape) {
     return (
-      <div className="w-64 bg-white border-l border-gray-200 p-4">
+      <div className="w-72 bg-white border-l border-gray-200 p-4">
         <h3 className="text-lg font-semibold mb-4">属性面板</h3>
         <div className="text-gray-500 text-sm">
           选择一个图形来编辑其属性
@@ -123,224 +134,177 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const shapeType = selectedShape.tagName.toLowerCase();
 
   return (
-    <div className="w-64 bg-white border-l border-gray-200 p-4">
-      <h3 className="text-lg font-semibold mb-4">属性面板</h3>
-      
-      {/* 图形类型信息 */}
-      <div className="mb-4 p-2 bg-gray-50 rounded">
-        <div className="text-sm font-medium text-gray-700">
-          图形类型: {shapeType === 'rect' ? '矩形' : 
-                     shapeType === 'circle' ? '圆形' : 
-                     shapeType === 'polygon' ? '三角形' : 
-                     shapeType === 'line' ? '线条' : '文字'}
-        </div>
+    <div className="w-72 bg-white border-l border-gray-200 p-0 flex flex-col">
+      <div className="grid grid-cols-3 text-sm border-b border-gray-200">
+        {(['style', 'text', 'shape'] as const).map(key => (
+          <button
+            key={key}
+            className={cn(
+              'py-2',
+              tab === key ? 'bg-gray-100 font-semibold text-gray-800' : 'hover:bg-gray-50 text-gray-600'
+            )}
+            onClick={() => setTab(key)}
+          >
+            {key === 'style' ? '样式' : key === 'text' ? '文本' : '调整图形'}
+          </button>
+        ))}
       </div>
 
-      <div className="space-y-4">
-        {/* 填充颜色 */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">填充颜色</label>
-          <div className="flex items-center space-x-2">
-            <Input
-              type="color"
-              value={fillColor}
-              onChange={handleFillChange}
-              className="w-16 h-8"
-            />
-            <Input
-              type="text"
-              value={fillColor}
-              onChange={(value) => handleFillChange(value)}
-              placeholder="#000000"
-              className="flex-1"
-            />
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {presetColors.map(color => (
-              <button
-                key={color}
-                className="w-6 h-6 rounded border border-gray-300"
-                style={{ backgroundColor: color }}
-                onClick={() => handleFillChange(color)}
-                title={color}
+      <div className="p-4 overflow-y-auto space-y-4">
+        {/* 样式 */}
+        {tab === 'style' && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {presetColors.slice(0, 16).map(color => (
+                <button
+                  key={color}
+                  className="w-8 h-8 rounded border border-gray-200 shadow-sm"
+                  style={{ backgroundColor: color }}
+                  onClick={() => handleFillChange(color)}
+                  title={color}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={fillEnabled}
+                onChange={(e) => {
+                  setFillEnabled(e.target.checked);
+                  if (e.target.checked) handleFillChange(fillColor);
+                  else handleFillChange('none');
+                }}
               />
-            ))}
-          </div>
-        </div>
+              <span className="text-sm text-gray-700">填充</span>
+              <Input
+                type="color"
+                value={fillColor}
+                disabled={!fillEnabled}
+                onChange={handleFillChange}
+                className="w-10 h-8 ml-auto"
+              />
+            </div>
 
-        {/* 边框颜色 */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">边框颜色</label>
-          <div className="flex items-center space-x-2">
-            <Input
-              type="color"
-              value={strokeColor}
-              onChange={handleStrokeChange}
-              className="w-16 h-8"
-            />
-            <Input
-              type="text"
-              value={strokeColor}
-              onChange={(value) => handleStrokeChange(value)}
-              placeholder="#000000"
-              className="flex-1"
-            />
-          </div>
-        </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={strokeEnabled}
+                onChange={(e) => {
+                  setStrokeEnabled(e.target.checked);
+                  if (e.target.checked) handleStrokeChange(strokeColor);
+                  else handleStrokeChange('none');
+                }}
+              />
+              <span className="text-sm text-gray-700">线条</span>
+              <Input
+                type="color"
+                value={strokeColor}
+                disabled={!strokeEnabled}
+                onChange={handleStrokeChange}
+                className="w-10 h-8 ml-auto"
+              />
+            </div>
 
-        {/* 边框宽度 */}
-        {shapeType !== 'text' && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">边框宽度</label>
-            <div className="flex items-center space-x-2">
+            {shapeType !== 'text' && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700">线宽</span>
+                <Input
+                  type="number"
+                  value={String(strokeWidth)}
+                  disabled={!strokeEnabled}
+                  onChange={(value) => handleStrokeWidthChange(parseFloat(value || '0'))}
+                  className="w-20"
+                  min="0"
+                  max="20"
+                  step="0.5"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm text-gray-700">
+                <span>不透明度</span>
+                <span>{Math.round(opacity * 100)}%</span>
+              </div>
               <input
                 type="range"
                 min="0"
-                max="20"
-                value={strokeWidth}
-                onChange={(e) => handleStrokeWidthChange(parseFloat(e.target.value))}
-                className="flex-1"
-              />
-              <Input
-                type="number"
-                value={String(strokeWidth)}
-                onChange={(value) => handleStrokeWidthChange(parseFloat(value))}
-                placeholder="2"
-                className="w-16"
-                min="0"
-                max="20"
+                max="1"
+                step="0.01"
+                value={opacity}
+                onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
+                className="w-full"
               />
             </div>
           </div>
         )}
 
-        {/* 旋转 */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">旋转角度</label>
-          <div className="flex items-center space-x-2">
-            <input
-              type="range"
-              min="-180"
-              max="180"
-              value={rotation}
-              onChange={(e) => handleRotationChange(parseFloat(e.target.value))}
-              className="flex-1"
-            />
-            <Input
-              type="number"
-              value={String(rotation)}
-              onChange={(value) => handleRotationChange(parseFloat(value))}
-              placeholder="0"
-              className="w-16"
-              min="-180"
-              max="180"
-            />
+        {/* 文本 */}
+        {tab === 'text' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700">字体</span>
+              <select className="flex-1 border border-gray-200 rounded px-2 py-1 text-sm bg-white" disabled={!isText}>
+                <option>Helvetica</option>
+                <option>Arial</option>
+                <option>Roboto</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" disabled={!isText}>B</Button>
+              <Button size="sm" variant="outline" disabled={!isText}><em>I</em></Button>
+              <Button size="sm" variant="outline" disabled={!isText}><u>U</u></Button>
+              <Input
+                type="number"
+                value="14"
+                onChange={() => {}}
+                className="w-16"
+                disabled={!isText}
+              />
+            </div>
+            <div className="text-xs text-gray-400">
+              文本样式暂仅支持颜色/大小基础控件，更多文字编辑请双击文本直接编辑。
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* 缩放 */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">缩放比例</label>
-          <div className="flex items-center space-x-2">
-            <input
-              type="range"
-              min="0.1"
-              max="5"
-              step="0.1"
-              value={scale}
-              onChange={(e) => handleScaleChange(parseFloat(e.target.value))}
-              className="flex-1"
-            />
-            <Input
-              type="number"
-              value={String(scale)}
-              onChange={(value) => handleScaleChange(parseFloat(value))}
-              placeholder="1"
-              className="w-16"
-              min="0.1"
-              max="5"
-              step="0.1"
-            />
+        {/* 调整图形 */}
+        {tab === 'shape' && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" variant="outline" onClick={onBringToFront}>移至最前</Button>
+              <Button size="sm" variant="outline" onClick={onSendToBack}>移至最后</Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700">旋转</span>
+              <Input
+                type="number"
+                value={String(rotation)}
+                onChange={(value) => handleRotationChange(parseFloat(value || '0'))}
+                className="w-20"
+                min="-180"
+                max="180"
+              />
+              <span className="text-sm text-gray-500">°</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700">缩放</span>
+              <Input
+                type="number"
+                value={String(scale)}
+                onChange={(value) => handleScaleChange(parseFloat(value || '1'))}
+                className="w-20"
+                min="0.1"
+                max="5"
+                step="0.1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" variant="outline" onClick={onDuplicate}>创建副本</Button>
+              <Button size="sm" variant="outline" onClick={onDelete}>删除</Button>
+            </div>
           </div>
-        </div>
-
-        {/* 透明度 */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">透明度</label>
-          <div className="flex items-center space-x-2">
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={opacity}
-              onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
-              className="flex-1"
-            />
-            <Input
-              type="number"
-              value={String(opacity)}
-              onChange={(value) => handleOpacityChange(parseFloat(value))}
-              placeholder="1"
-              className="w-16"
-              min="0"
-              max="1"
-              step="0.1"
-            />
-          </div>
-        </div>
-
-        {/* 操作按钮 */}
-        <div className="pt-4 border-t border-gray-200 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onDuplicate}
-              className="w-full"
-            >
-              复制
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onDelete}
-              className="w-full"
-            >
-              删除
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onBringToFront}
-              className="w-full"
-            >
-              置顶
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onSendToBack}
-              className="w-full"
-            >
-              置底
-            </Button>
-          </div>
-        </div>
-
-        {/* 快捷键提示 */}
-        <div className="pt-4 border-t border-gray-200">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">快捷键</h4>
-          <div className="text-xs text-gray-500 space-y-1">
-            <div>删除: Delete键</div>
-            <div>复制: Ctrl/Cmd + D</div>
-            <div>撤销: Ctrl/Cmd + Z</div>
-            <div>重做: Ctrl/Cmd + Shift + Z</div>
-            <div>重做: Ctrl/Cmd + Y</div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

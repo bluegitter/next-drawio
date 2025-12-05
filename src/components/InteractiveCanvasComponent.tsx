@@ -1830,37 +1830,58 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   }, [applyTransform, updateSelectedShape]);
 
   const changeSelectedFill = useCallback((color: string) => {
-    updateSelectedShape(shape => {
-      shape.data.fill = color;
-      if (shape.type === 'line' || shape.type === 'polyline' || shape.type === 'connector') {
-        shape.element.setAttribute('fill', 'none');
+    if (selectedIdsRef.current.size === 0) return;
+    const updatedShapes = shapes.map(shape => {
+      if (!selectedIdsRef.current.has(shape.id)) return shape;
+      const nextShape = { ...shape, data: { ...shape.data } };
+      nextShape.data.fill = color;
+      if (nextShape.type === 'line' || nextShape.type === 'polyline' || nextShape.type === 'connector') {
+        nextShape.element.setAttribute('fill', 'none');
       } else {
-        shape.element.setAttribute('fill', color);
+        nextShape.element.setAttribute('fill', color);
       }
+      return nextShape;
     });
-  }, [updateSelectedShape]);
+    setShapes(updatedShapes);
+    saveToHistory(updatedShapes, selectedIdsRef.current);
+  }, [saveToHistory, shapes]);
 
   const changeSelectedStroke = useCallback((color: string) => {
-    updateSelectedShape(shape => {
-      shape.data.stroke = color;
-      shape.element.setAttribute('stroke', color);
+    if (selectedIdsRef.current.size === 0) return;
+    const updatedShapes = shapes.map(shape => {
+      if (!selectedIdsRef.current.has(shape.id)) return shape;
+      const nextShape = { ...shape, data: { ...shape.data, stroke: color } };
+      nextShape.element.setAttribute('stroke', color);
+      return nextShape;
     });
-  }, [updateSelectedShape]);
+    setShapes(updatedShapes);
+    saveToHistory(updatedShapes, selectedIdsRef.current);
+  }, [saveToHistory, shapes]);
 
   const changeSelectedStrokeWidth = useCallback((width: number) => {
-    updateSelectedShape(shape => {
-      shape.data.strokeWidth = width;
-      shape.element.setAttribute('stroke-width', String(width));
+    if (selectedIdsRef.current.size === 0) return;
+    const updatedShapes = shapes.map(shape => {
+      if (!selectedIdsRef.current.has(shape.id)) return shape;
+      const nextShape = { ...shape, data: { ...shape.data, strokeWidth: width } };
+      nextShape.element.setAttribute('stroke-width', String(width));
+      return nextShape;
     });
-  }, [updateSelectedShape]);
+    setShapes(updatedShapes);
+    saveToHistory(updatedShapes, selectedIdsRef.current);
+  }, [saveToHistory, shapes]);
 
   const changeSelectedOpacity = useCallback((opacity: number) => {
+    if (selectedIdsRef.current.size === 0) return;
     const safeOpacity = Math.min(1, Math.max(0, opacity));
-    updateSelectedShape(shape => {
-      shape.data.opacity = safeOpacity;
-      shape.element.setAttribute('opacity', String(safeOpacity));
+    const updatedShapes = shapes.map(shape => {
+      if (!selectedIdsRef.current.has(shape.id)) return shape;
+      const nextShape = { ...shape, data: { ...shape.data, opacity: safeOpacity } };
+      nextShape.element.setAttribute('opacity', String(safeOpacity));
+      return nextShape;
     });
-  }, [updateSelectedShape]);
+    setShapes(updatedShapes);
+    saveToHistory(updatedShapes, selectedIdsRef.current);
+  }, [saveToHistory, shapes]);
 
   const undo = useCallback(() => {
     if (historyIndex <= 0) return;
