@@ -441,7 +441,7 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] flex flex-col text-sm text-gray-700">
+    <div className="min-h-screen h-screen overflow-hidden bg-[#f5f5f5] flex flex-col text-sm text-gray-700">
       {/* 顶部菜单栏 */}
       <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4">
         <div className="flex items-center gap-3">
@@ -579,10 +579,10 @@ export default function Home() {
       </div>
 
       {/* 主体区域 */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* 左侧形状库 */}
-        <div className="w-[320px] min-w-[280px] bg-[#f1f3f5] border-r border-gray-200 flex flex-col">
-          <div className="px-4 pt-4">
+        <div className="w-[320px] min-w-[280px] bg-[#f1f3f5] border-r border-gray-200 flex flex-col h-full min-h-0">
+          <div className="px-4 pt-4 flex-shrink-0">
             <div className="flex items-center bg-white border border-gray-200 rounded-full shadow-sm px-4 py-2">
               <input
                 className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none"
@@ -592,7 +592,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="overflow-y-auto flex-1 px-4 py-4 space-y-4">
+          <div className="overflow-y-auto flex-1 min-h-0 px-4 py-4 space-y-4">
             <div>
               <button
                 className="flex items-center gap-2 text-gray-800 font-semibold text-sm mb-3 hover:text-gray-900"
