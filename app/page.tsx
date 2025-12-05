@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EnhancedToolbar, ToolType } from '@/components/EnhancedToolbar';
@@ -18,6 +18,7 @@ export default function Home() {
   const [selectedShape, setSelectedShape] = useState<SVGElement | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const canvasRef = useRef<CanvasComponentRef | null>(null);
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
 
   const refreshHistoryState = useCallback(() => {
@@ -30,8 +31,15 @@ export default function Home() {
   const handleCanvasReady = useCallback((canvas: SVGSVGElement, methods: CanvasComponentRef) => {
     console.log('Advanced Canvas initialized:', canvas);
     canvasMethodsRef.current = methods;
+    canvasRef.current = methods;
     refreshHistoryState();
   }, [refreshHistoryState]);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      canvasMethodsRef.current = canvasRef.current;
+    }
+  });
 
   const handleCanvasError = useCallback((error: Error) => {
     console.error('Canvas initialization failed:', error);
@@ -179,58 +187,144 @@ export default function Home() {
   }, [refreshHistoryState]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* 增强工具栏 */}
-      <EnhancedToolbar 
-        currentTool={currentTool}
-        onToolChange={handleToolChange}
-        onExport={handleExport}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        disabled={false}
-        isConnecting={isConnecting}
-      />
-
-      {/* 主工作区 */}
-      <div className="flex flex-1">
-        {/* 左侧工具 + 图标面板 */}
-        <div className="w-64 bg-white border-r border-gray-200 p-3 space-y-3">
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <Button size="sm" variant="ghost" title="选择工具" onClick={() => handleToolChange('select')}>↖</Button>
-            <Button size="sm" variant="ghost" title="矩形工具" onClick={() => handleToolChange('rectangle')}>▢</Button>
-            <Button size="sm" variant="ghost" title="圆角矩形工具" onClick={() => handleToolChange('roundedRect')}>▭</Button>
-            <Button size="sm" variant="ghost" title="圆形工具" onClick={() => handleToolChange('circle')}>○</Button>
-            <Button size="sm" variant="ghost" title="三角形工具" onClick={() => handleToolChange('triangle')}>△</Button>
-            <Button size="sm" variant="ghost" title="直线工具" onClick={() => handleToolChange('line')}>╱</Button>
-            <Button size="sm" variant="ghost" title="折线工具" onClick={() => handleToolChange('polyline')}>⎍</Button>
-            <Button size="sm" variant="ghost" title="文字工具" onClick={() => handleToolChange('text')}>T</Button>
-            <Button size="sm" variant="ghost" title="连接工具" onClick={() => handleToolChange('connect')}>🔗</Button>
+    <div className="min-h-screen bg-[#f5f5f5] flex flex-col text-sm text-gray-700">
+      {/* 顶部菜单栏 */}
+      <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-[#f7c266] rounded flex items-center justify-center text-white font-bold">IO</div>
+          <span className="font-medium text-gray-800">未命名绘图</span>
+          <div className="flex items-center gap-4 text-gray-600">
+            {['文件','编辑','查看','调整图形','其它','帮助'].map(item => (
+              <button key={item} className="hover:text-gray-800">{item}</button>
+            ))}
           </div>
-          <div className="h-px bg-gray-200" />
-          <div>
-            <div className="text-sm font-semibold text-gray-700 mb-2">网络图标</div>
-            <div className="grid grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
+          <div className="ml-4 px-3 py-1 bg-[#fce7e7] text-[#c24141] border border-[#f2bebe] rounded text-xs">
+            修改未保存，点击此处以保存。
+          </div>
+        </div>
+        <div className="ml-auto">
+          <Button size="sm" variant="ghost" className="border border-gray-300">🧑‍💻 共享</Button>
+        </div>
+      </div>
+
+      {/* 工具栏 */}
+      <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-3 text-base">
+        <span className="text-gray-500 cursor-pointer">◻</span>
+        <span className="text-gray-500 cursor-pointer">☰</span>
+        <select className="border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none">
+          <option>100%</option>
+          <option>75%</option>
+          <option>50%</option>
+        </select>
+        <div className="flex items-center gap-3 text-gray-600">
+          {['↺','↻','◴','🖨','🖉','✏','✂','◌','↦','☐','＋','☐','▦','✶'].map((t, i) => (
+            <button key={i} className="hover:text-gray-800">{t}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* 主体区域 */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 左侧形状库 */}
+        <div className="w-72 bg-white border-r border-gray-200 flex flex-col">
+          <div className="px-3 py-2">
+            <input
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none"
+              placeholder="输入搜索"
+            />
+          </div>
+          <div className="overflow-y-auto flex-1 px-2 pb-4">
+          <div className="text-xs font-semibold text-gray-500 px-2 py-2 border-b">便捷本</div>
+          <div className="grid grid-cols-4 gap-2 px-2 py-2">
+              {[
+                { key: 'rectangle', label: '▭' },
+                { key: 'roundedRect', label: '▢' },
+                { key: 'circle', label: '◯' },
+                { key: 'triangle', label: '△' },
+                { key: 'line', label: '／' },
+                { key: 'polyline', label: '⎍' },
+                { key: 'text', label: 'T' },
+                { key: 'connect', label: '↔' },
+              ].map(item => (
+                <button
+                  key={item.key}
+                  onClick={() => handleToolChange(item.key as ToolType)}
+                  className="h-12 border border-gray-200 rounded bg-white hover:border-blue-400 flex items-center justify-center text-gray-600"
+                  title={item.key}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="text-xs font-semibold text-gray-500 px-2 py-2 border-b">
+              <div className="flex items-center justify-between mb-2">
+                <span>组合</span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="border border-gray-200 text-xs px-2"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Combine button clicked, canvasMethodsRef.current:', canvasMethodsRef.current);
+                    if (canvasMethodsRef.current) {
+                      canvasMethodsRef.current.combineSelected();
+                      }
+                    }}
+                  >
+                    组合
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="border border-gray-200 text-xs px-2"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      canvasMethodsRef.current?.ungroupSelected();
+                    }}
+                  >
+                    取消
+                  </Button>
+                </div>
+              </div>
+              <div className="text-xs text-gray-400 px-2">
+                提示：按住 Ctrl/Cmd 键点击多个图形进行多选
+              </div>
+            </div>
+
+            <div className="text-xs font-semibold text-gray-500 px-2 py-2 border-b">网络图标</div>
+            <div className="grid grid-cols-3 gap-3 px-2 py-3 max-h-96 overflow-y-auto">
               {sidebarIcons.map(icon => (
                 <button
                   key={icon.name}
-                  className="flex flex-col items-center gap-1 border border-gray-200 rounded p-2 hover:border-blue-400 hover:shadow-sm transition"
+                  className="flex flex-col items-center gap-1 border border-gray-200 rounded p-2 hover:border-blue-400 hover:shadow-sm transition bg-white"
                   onClick={() => canvasMethodsRef.current?.addSvgIcon(icon.src, { width: 80, height: 60 })}
                   title={icon.name}
                 >
                   <img src={icon.src} alt={icon.name} className="w-12 h-12 object-contain" />
-                  <span className="text-xs text-gray-600 truncate w-full">{icon.name}</span>
+                  <span className="text-xs text-gray-600 truncate w-full text-center">{icon.name}</span>
                 </button>
               ))}
             </div>
           </div>
+          <div className="border-t px-2 py-2 text-blue-500 text-sm cursor-pointer hover:underline">+ 更多图形</div>
         </div>
 
-        {/* 画布区域 */}
-        <div className="flex-1 bg-gray-100 p-4 overflow-auto">
-          <div className="flex items-center justify-center min-h-full">
+        {/* 画布区 */}
+        <div className="flex-1 bg-[#eaeaea] overflow-auto flex justify-center items-start p-4">
+          <div
+            className="relative"
+            style={{
+              backgroundImage:
+                'linear-gradient(#e5e5e5 1px, transparent 1px), linear-gradient(90deg, #e5e5e5 1px, transparent 1px)',
+              backgroundSize: '20px 20px',
+            }}
+          >
             <InteractiveCanvasComponent
+              ref={canvasRef}
               width={canvasWidth}
               height={canvasHeight}
               backgroundColor={backgroundColor}
@@ -243,98 +337,71 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 属性面板 */}
-        <PropertyPanel
-          selectedShape={selectedShape}
-          onFillChange={handleFillChange}
-          onStrokeChange={handleStrokeChange}
-          onStrokeWidthChange={handleStrokeWidthChange}
-          onRotationChange={handleRotationChange}
-          onScaleChange={handleScaleChange}
-          onOpacityChange={handleOpacityChange}
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
-          onBringToFront={handleBringToFront}
-          onSendToBack={handleSendToBack}
-        />
+        {/* 右侧属性栏 */}
+        <div className="w-72 bg-white border-l border-gray-200 p-4 space-y-3">
+          <PropertyPanel
+            selectedShape={selectedShape}
+            onFillChange={handleFillChange}
+            onStrokeChange={handleStrokeChange}
+            onStrokeWidthChange={handleStrokeWidthChange}
+            onRotationChange={handleRotationChange}
+            onScaleChange={handleScaleChange}
+            onOpacityChange={handleOpacityChange}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            onBringToFront={handleBringToFront}
+            onSendToBack={handleSendToBack}
+          />
 
-        {/* 右侧设置面板 */}
-        <div className="w-64 bg-white border-l border-gray-200 p-4">
-          <h3 className="text-lg font-semibold mb-4">画布设置</h3>
-          
-          <div className="space-y-4">
-            {/* 画布设置 */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">画布宽度</label>
-              <Input
-                type="number"
-                value={String(canvasWidth)}
-                onChange={(value) => setCanvasWidth(Number(value))}
-                placeholder="宽度"
-                min="100"
-                max="2000"
-              />
+          <div className="space-y-2 text-sm text-gray-700 border-t pt-3">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" defaultChecked /> <span>网格</span>
             </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">画布高度</label>
-              <Input
-                type="number"
-                value={String(canvasHeight)}
-                onChange={(value) => setCanvasHeight(Number(value))}
-                placeholder="高度"
-                min="100"
-                max="2000"
-              />
+            <div className="flex items-center gap-2">
+              <input type="checkbox" defaultChecked /> <span>页面视图图</span>
             </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">背景颜色</label>
-              <Input
-                type="color"
-                value={backgroundColor}
-                onChange={setBackgroundColor}
-                placeholder="背景颜色"
-              />
+            <div className="flex items-center gap-2">
+              <input type="checkbox" /> <span>背景</span>
             </div>
-
-            <div className="pt-4 border-t border-gray-200">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">画布操作</h4>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                  onClick={handleUndo}
-                >
-                  撤销
-                </button>
-                <button
-                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                  onClick={handleRedo}
-                >
-                  重做
-                </button>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" /> <span>背景色</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" /> <span>阴影</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" defaultChecked /> <span>连接箭头</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" defaultChecked /> <span>连接点</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" defaultChecked /> <span>参考线</span>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">页面尺寸</label>
+              <select className="w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                <option>A4 (210 mm x 297 mm)</option>
+                <option>A3 (297 mm x 420 mm)</option>
+              </select>
+              <div className="flex items-center gap-2 text-xs">
+                <input type="radio" name="orientation" defaultChecked /> 竖向
+                <input type="radio" name="orientation" className="ml-3" /> 横向
               </div>
+              <Button size="sm" variant="ghost" className="w-full border mt-1">清除默认风格</Button>
             </div>
           </div>
         </div>
       </div>
 
       {/* 底部状态栏 */}
-      <div className="bg-gray-800 text-white px-4 py-1">
-        <div className="flex items-center justify-between text-xs">
-          <span>Next-DrawIO Pro v3.0.0 - 高级版</span>
-          <span>画布: {canvasWidth} × {canvasHeight}px</span>
-          <span>当前工具: {currentTool === 'select' ? '选择' : 
-                      currentTool === 'rectangle' ? '矩形' :
-                      currentTool === 'roundedRect' ? '圆角矩形' :
-                      currentTool === 'circle' ? '圆形' :
-                      currentTool === 'triangle' ? '三角形' :
-                      currentTool === 'line' ? '直线' :
-                      currentTool === 'polyline' ? '折线' :
-                      currentTool === 'text' ? '文字' :
-                      currentTool === 'connect' ? '连接' : currentTool}</span>
-          <span>支持网格、对齐、自由绘制</span>
+      <div className="bg-white border-t border-gray-200 px-3 py-2 text-xs text-gray-600 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">＋</span>
+          <span>第 1 页 ▼</span>
         </div>
+        <div className="text-gray-500">画布: {canvasWidth} × {canvasHeight}px · 当前工具: {currentTool}</div>
+        <div className="text-gray-500">支持网格、对齐、自由绘制</div>
       </div>
     </div>
   );

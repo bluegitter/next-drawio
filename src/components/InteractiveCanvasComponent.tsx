@@ -13,6 +13,8 @@ export interface CanvasComponentRef {
   addPolyline: () => void;
   addText: () => void;
   addSvgIcon: (href: string, options?: { width?: number; height?: number }) => void;
+   combineSelected: () => void;
+   ungroupSelected: () => void;
   deleteSelected: () => void;
   clearCanvas: () => void;
   exportCanvas: (format: 'png' | 'jpg' | 'svg') => void;
@@ -70,6 +72,7 @@ interface SVGShape {
     lineHeight?: string;
     startPortId?: string | null;
     endPortId?: string | null;
+    groupId?: string | null;
     fill: string;
     stroke: string;
     strokeWidth: number;
@@ -121,6 +124,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const hasCalledReady = useRef(false);
   const methodsRef = useRef<CanvasComponentRef | null>(null);
   const portElementsRef = useRef<Map<string, SVGElement[]>>(new Map());
+  const selectedIdsRef = useRef<Set<string>>(new Set());
   const [connectionStartPort, setConnectionStartPort] = useState<string | null>(null);
   const connectorHandleRef = useRef<Map<string, { start: SVGCircleElement; end: SVGCircleElement }>>(new Map());
   const skipNextCanvasClickClear = useRef(false);
@@ -169,11 +173,18 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     return first.done ? null : first.value;
   }, [selectedIds]);
   const setSelectedShape = useCallback((id: string | null) => {
-    setSelectedIds(id ? new Set([id]) : new Set());
+    const next = id ? new Set([id]) : new Set<string>();
+    selectedIdsRef.current = next;
+    setSelectedIds(next);
   }, []);
   const setSelectedShapes = useCallback((ids: string[]) => {
-    setSelectedIds(new Set(ids));
+    const next = new Set(ids);
+    selectedIdsRef.current = next;
+    setSelectedIds(next);
   }, []);
+  useEffect(() => {
+    selectedIdsRef.current = selectedIds;
+  }, [selectedIds]);
 
   // 生成唯一ID
   const generateId = useCallback(() => {
@@ -267,6 +278,37 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     if (def?.getBounds) return def.getBounds(shape);
     return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
   }, [getDef]);
+
+  const groupSelectionBounds = useMemo(() => {
+    if (!svgRef.current || selectedIds.size <= 1) return null;
+    // 仅当当前选中图元共享同一 groupId 时显示组合外框
+    const selectedShapes = shapes.filter(s => selectedIds.has(s.id));
+    const groupIds = new Set(selectedShapes.map(s => s.data.groupId).filter(Boolean) as string[]);
+    if (groupIds.size !== 1) return null;
+
+    const svgRect = svgRef.current.getBoundingClientRect();
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    selectedShapes.forEach(shape => {
+      const rect = shape.element.getBoundingClientRect();
+      minX = Math.min(minX, rect.left - svgRect.left);
+      minY = Math.min(minY, rect.top - svgRect.top);
+      maxX = Math.max(maxX, rect.right - svgRect.left);
+      maxY = Math.max(maxY, rect.bottom - svgRect.top);
+    });
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) return null;
+    const padding = 10;
+    return {
+      x: minX - padding,
+      y: minY - padding,
+      w: (maxX - minX) + padding * 2,
+      h: (maxY - minY) + padding * 2,
+    };
+  }, [selectedIds, shapes]);
 
   const getBounds = useCallback((shape: SVGShape) => {
     const b = getShapeBounds(shape);
@@ -868,6 +910,37 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     }
   }, [saveToHistory, selectedIds, selectedShape, shapes]);
 
+  const combineSelected = useCallback(() => {
+    const currentSel = selectedIdsRef.current;
+    if (currentSel.size < 2) return;
+    const groupId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const updatedShapes = shapes.map(shape => {
+      if (currentSel.has(shape.id)) {
+        return { ...shape, data: { ...shape.data, groupId } };
+      }
+      return shape;
+    });
+    setShapes(updatedShapes);
+    saveToHistory(updatedShapes, currentSel);
+  }, [saveToHistory, shapes]);
+
+  const ungroupSelected = useCallback(() => {
+    const currentSel = selectedIdsRef.current;
+    if (currentSel.size === 0) return;
+    const targetGroup = shapes.find(s => currentSel.has(s.id) && s.data.groupId)?.data.groupId;
+    if (!targetGroup) return;
+    const updatedShapes = shapes.map(shape => {
+      if (shape.data.groupId === targetGroup) {
+        const newData = { ...shape.data };
+        delete newData.groupId;
+        return { ...shape, data: newData };
+      }
+      return shape;
+    });
+    setShapes(updatedShapes);
+    saveToHistory(updatedShapes, currentSel);
+  }, [saveToHistory, shapes]);
+
   // 通用新增图元
   const addShape = useCallback((type: string, options?: any) => {
     if (!svgRef.current) return;
@@ -1379,6 +1452,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       saveToHistory();
     } else if (isSelectingBox && selectionRect) {
       const selectedList = shapes.filter(shape => {
+        if (shape.type === 'connector') return false;
         const b = getShapeBounds(shape);
         return b.minX >= selectionRect.x &&
           b.maxX <= selectionRect.x + selectionRect.w &&
@@ -1417,6 +1491,10 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     setResizeHandle(null);
     setDraggingCornerHandle(null);
     setDragStart({ x: 0, y: 0 });
+    // 取消组合时清理 group 选框偏移
+    if (selectionRect) {
+      setSelectionRect(null);
+    }
   }, [connectShapes, connectionStart, connectionStartPort, getShapeBounds, isConnecting, isDragging, isResizing, isSelectingBox, onShapeSelect, saveToHistory, selectionRect, setSelectedShape, setSelectedShapes, shapes, tempLine]);
 
   // 图形鼠标按下事件处理
@@ -1442,11 +1520,43 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       // Shift+点击创建连接
       startConnection(selectedShape);
     } else {
-      const alreadySelected = selectedIds.has(shape.id);
-      if (!alreadySelected) {
-        setSelectedShape(shape.id);
+      if (e.metaKey || e.ctrlKey) {
+        console.log('Ctrl/Cmd+Click for multi-selection');
+        const next = new Set(selectedIds);
+        if (next.has(shape.id)) {
+          next.delete(shape.id);
+          console.log('Removing shape from selection:', shape.id);
+        } else {
+          next.add(shape.id);
+          console.log('Adding shape to selection:', shape.id);
+        }
+        console.log('New selection:', Array.from(next));
+        setSelectedIds(next);
+        // 如果还有选中的图形，调用onShapeSelect
+        if (next.size > 0) {
+          const firstSelectedId = Array.from(next)[0];
+          const firstSelectedShape = shapes.find(s => s.id === firstSelectedId);
+          if (firstSelectedShape) {
+            onShapeSelect?.(firstSelectedShape.element);
+          }
+        } else {
+          onShapeSelect?.(null);
+        }
+        return;
       }
-      onShapeSelect?.(shape.element);
+      
+      const groupId = shape.data.groupId;
+      if (groupId) {
+        const groupIds = shapes.filter(s => s.data.groupId === groupId).map(s => s.id);
+        console.log('Shape is in group, selecting all group members:', groupIds);
+        setSelectedIds(new Set(groupIds));
+        onShapeSelect?.(shape.element);
+      } else {
+        // 普通点击，只选中当前图形
+        console.log('Normal click, selecting single shape:', shape.id);
+        setSelectedIds(new Set([shape.id]));
+        onShapeSelect?.(shape.element);
+      }
       // 连接线/直线：无连接时可整体拖动；有连接时仅选中
       if ((shape.type === 'line' || shape.type === 'connector') && !isLineConnected(shape)) {
         setIsDragging(true);
@@ -2012,6 +2122,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       } else if (meta && (e.key.toLowerCase() === 'y')) {
         e.preventDefault();
         redo();
+      } else if (meta && e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          ungroupSelected();
+        } else {
+          combineSelected();
+        }
       } else if (e.key === 'Escape') {
         if (isConnecting) {
           if (tempLine && svgRef.current?.contains(tempLine)) {
@@ -2027,7 +2144,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteSelected, duplicateSelected, isConnecting, redo, tempLine, undo, selectedIds]);
+  }, [combineSelected, deleteSelected, duplicateSelected, isConnecting, redo, tempLine, undo, selectedIds, ungroupSelected]);
 
   // 创建方法对象
   const methods: CanvasComponentRef = {
@@ -2039,6 +2156,8 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     addPolyline,
     addText,
     addSvgIcon,
+    combineSelected,
+    ungroupSelected,
     deleteSelected,
     clearCanvas,
     exportCanvas,
@@ -2145,6 +2264,47 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
             height: selectionRect.h,
           }}
         />
+      )}
+      {groupSelectionBounds && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: groupSelectionBounds.x,
+            top: groupSelectionBounds.y,
+            width: groupSelectionBounds.w,
+            height: groupSelectionBounds.h,
+          }}
+        >
+          <div className="absolute inset-0 border-2 border-dashed border-[#36a7ff]" />
+          {[
+            { x: 0, y: 0 },
+            { x: 0.5, y: 0 },
+            { x: 1, y: 0 },
+            { x: 0, y: 0.5 },
+            { x: 1, y: 0.5 },
+            { x: 0, y: 1 },
+            { x: 0.5, y: 1 },
+            { x: 1, y: 1 },
+          ].map((p, idx) => (
+            <div
+              key={idx}
+              className="absolute w-4 h-4 bg-[#36a7ff] rounded-full border-2 border-white"
+              style={{
+                left: `calc(${p.x * 100}% - 8px)`,
+                top: `calc(${p.y * 100}% - 8px)`,
+              }}
+            />
+          ))}
+          <div
+            className="absolute w-5 h-5 bg-white border-2 border-[#36a7ff] rounded-full flex items-center justify-center text-xs text-[#36a7ff]"
+            style={{
+              right: -18,
+              top: -18,
+            }}
+          >
+            ⟳
+          </div>
+        </div>
       )}
       {isConnecting && (
         <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-sm">
