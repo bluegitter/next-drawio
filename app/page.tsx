@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { EnhancedToolbar, ToolType } from '@/components/EnhancedToolbar';
 import InteractiveCanvasComponent, { CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
 import PropertyPanel from '@/components/PropertyPanel';
-import { SHAPE_ICONS, CHECK_ICON } from '@/constants/svgIcons';
+import { SHAPE_ICONS, CHECK_ICON, GENERAL_SHAPE_LIBRARY } from '@/constants/svgIcons';
 import { sidebarIcons, getIconUrl, primaryEquipmentIcons } from '@/constants/iconList';
 import {
   PanelsLeftRight,
@@ -431,7 +431,16 @@ export default function Home() {
         rectangle: 'rect',
         roundedRect: 'roundedRect',
         circle: 'circle',
+        ellipse: 'ellipse',
         triangle: 'triangle',
+        diamond: 'diamond',
+        trapezoid: 'trapezoid',
+        hexagon: 'hexagon',
+        pentagon: 'pentagon',
+        speech: 'speech',
+        wave: 'wave',
+        cloud: 'cloud',
+        cylinder: 'cylinder',
         line: 'line',
         polyline: 'polyline',
         text: 'text',
@@ -931,33 +940,57 @@ export default function Home() {
                 <span>通用</span>
               </button>
               {expandedSections.general && (
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[
-                    { key: 'rectangle', label: '矩形' },
-                    { key: 'roundedRect', label: '圆角矩形' },
-                    { key: 'circle', label: '圆形' },
-                    { key: 'triangle', label: '三角形' },
-                    { key: 'line', label: '直线' },
-                    { key: 'polyline', label: '折线' },
-                    { key: 'text', label: '文本' },
-                    { key: 'connect', label: '连接' },
-                  ].map(item => (
-                  <button
-                    key={item.key}
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('application/x-draw-shape', item.key);
-                      e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    onClick={() => handleToolChange(item.key as ToolType)}
-                    className="h-12 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition"
-                    title={item.key}
-                  >
-                      <img src={SHAPE_ICONS[item.key]} alt={item.label} className="w-5 h-5 mb-1" />
-                      <span className="text-[10px]">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { key: 'rectangle', label: '矩形' },
+                      { key: 'roundedRect', label: '圆角矩形' },
+                      { key: 'circle', label: '圆形' },
+                      { key: 'triangle', label: '三角形' },
+                      { key: 'line', label: '直线' },
+                      { key: 'polyline', label: '折线' },
+                      { key: 'text', label: '文本' },
+                      { key: 'connect', label: '连接' },
+                    ].map(item => (
+                    <button
+                      key={item.key}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/x-draw-shape', item.key);
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      onClick={() => handleToolChange(item.key as ToolType)}
+                      className="h-12 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition"
+                      title={item.key}
+                    >
+                        <img src={SHAPE_ICONS[item.key]} alt={item.label} className="w-5 h-5 mb-1" />
+                        <span className="text-[10px]">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="text-xs text-gray-500 mb-2">常用符号库</div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {GENERAL_SHAPE_LIBRARY.map(item => (
+                        <button
+                          key={item.key}
+                          className="h-12 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition"
+                          title={item.label}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/x-draw-shape', item.key);
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      onClick={() => canvasMethodsRef.current?.addShapeAt(item.key, { x: 120, y: 120 })}
+                        >
+                          <img src={item.icon} alt={item.label} className="w-7 h-7 object-contain mb-1" />
+                          <span className="text-[10px] text-center leading-tight px-1">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 

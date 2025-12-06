@@ -9,12 +9,22 @@ import { polylineShape } from './polyline';
 import { connectorShape } from './connector';
 import { imageShape } from './image';
 import { ShapeDefinition } from './types';
+import { diamondShape, trapezoidShape, hexagonShape, pentagonShape, speechShape, waveShape, ellipseShape, cloudShape, cylinderShape } from './customShapes';
 
 export const shapeRegistry: ShapeRegistry = {
   rect: rectShape,
   roundedRect: roundedRectShape,
   circle: circleShape,
+  ellipse: ellipseShape,
   triangle: triangleShape,
+  diamond: diamondShape,
+  trapezoid: trapezoidShape,
+  hexagon: hexagonShape,
+  pentagon: pentagonShape,
+  speech: speechShape,
+  wave: waveShape,
+  cloud: cloudShape,
+  cylinder: cylinderShape,
   text: textShape,
   line: lineShape,
   polyline: polylineShape,

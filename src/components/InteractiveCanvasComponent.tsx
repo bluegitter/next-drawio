@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { shapeRegistry, getPortsForShape } from '../shapes';
+import { updateCylinderPath, updateCloudPath } from '../shapes/customShapes';
 import type { ShapeDefinition } from '../shapes/types';
 
 export interface CanvasComponentRef {
@@ -65,7 +66,7 @@ export interface CanvasComponentProps {
 
 interface SVGShape {
   id: string;
-  type: 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'line' | 'polyline' | 'text' | 'connector' | 'image';
+  type: 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'line' | 'polyline' | 'text' | 'connector' | 'image' | 'diamond' | 'trapezoid' | 'hexagon' | 'pentagon' | 'speech' | 'wave' | 'cloud' | 'ellipse' | 'cylinder';
   element: SVGElement;
   data: {
     x?: number;
@@ -2167,6 +2168,12 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           (nextShape.element as SVGImageElement).setAttributeNS('http://www.w3.org/1999/xlink', 'href', tinted);
           console.log('[changeSelectedFill:image] fallback tintDataUri applied', { tintedLength: tinted.length });
         }
+      } else if (nextShape.type === 'cylinder') {
+        nextShape.data.fill = color;
+        updateCylinderPath(nextShape);
+      } else if (nextShape.type === 'cloud') {
+        nextShape.data.fill = color;
+        updateCloudPath(nextShape);
       } else {
         nextShape.element.setAttribute('fill', color);
       }
@@ -2175,7 +2182,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     setShapesState(() => updatedShapes);
     console.log('[changeSelectedFill] shapes updated, saving history');
     saveToHistory(updatedShapes, targetIds);
-  }, [decodeDataUri, saveToHistory, selectedIds, tintDataUri, tintSvgText, toDataUri]);
+  }, [decodeDataUri, saveToHistory, selectedIds, tintDataUri, tintSvgText, toDataUri, updateCylinderPath]);
 
   const changeSelectedStroke = useCallback((color: string) => {
     const targetIds = selectedIdsRef.current.size ? selectedIdsRef.current : selectedIds;
@@ -2183,12 +2190,18 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const updatedShapes = shapes.map(shape => {
       if (!targetIds.has(shape.id)) return shape;
       const nextShape = { ...shape, data: { ...shape.data, stroke: color } };
-      nextShape.element.setAttribute('stroke', color);
+      if (nextShape.type === 'cylinder') {
+        updateCylinderPath(nextShape);
+      } else if (nextShape.type === 'cloud') {
+        updateCloudPath(nextShape);
+      } else {
+        nextShape.element.setAttribute('stroke', color);
+      }
       return nextShape;
     });
     setShapesState(() => updatedShapes);
     saveToHistory(updatedShapes, targetIds);
-  }, [saveToHistory, selectedIds, shapes]);
+  }, [saveToHistory, selectedIds, shapes, updateCylinderPath]);
 
   const changeSelectedStrokeWidth = useCallback((width: number) => {
     const targetIds = selectedIdsRef.current.size ? selectedIdsRef.current : selectedIds;
@@ -2196,12 +2209,18 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const updatedShapes = shapes.map(shape => {
       if (!targetIds.has(shape.id)) return shape;
       const nextShape = { ...shape, data: { ...shape.data, strokeWidth: width } };
-      nextShape.element.setAttribute('stroke-width', String(width));
+      if (nextShape.type === 'cylinder') {
+        updateCylinderPath(nextShape);
+      } else if (nextShape.type === 'cloud') {
+        updateCloudPath(nextShape);
+      } else {
+        nextShape.element.setAttribute('stroke-width', String(width));
+      }
       return nextShape;
     });
     setShapesState(() => updatedShapes);
     saveToHistory(updatedShapes, targetIds);
-  }, [saveToHistory, selectedIds, shapes]);
+  }, [saveToHistory, selectedIds, shapes, updateCylinderPath]);
 
   const changeSelectedOpacity = useCallback((opacity: number) => {
     const targetIds = selectedIdsRef.current.size ? selectedIdsRef.current : selectedIds;
@@ -2210,12 +2229,18 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const updatedShapes = shapes.map(shape => {
       if (!targetIds.has(shape.id)) return shape;
       const nextShape = { ...shape, data: { ...shape.data, opacity: safeOpacity } };
-      nextShape.element.setAttribute('opacity', String(safeOpacity));
+      if (nextShape.type === 'cylinder') {
+        updateCylinderPath(nextShape);
+      } else if (nextShape.type === 'cloud') {
+        updateCloudPath(nextShape);
+      } else {
+        nextShape.element.setAttribute('opacity', String(safeOpacity));
+      }
       return nextShape;
     });
     setShapesState(() => updatedShapes);
     saveToHistory(updatedShapes, targetIds);
-  }, [saveToHistory, selectedIds, shapes]);
+  }, [saveToHistory, selectedIds, shapes, updateCylinderPath]);
 
   const undo = useCallback(() => {
     if (historyIndex <= 0) return;
