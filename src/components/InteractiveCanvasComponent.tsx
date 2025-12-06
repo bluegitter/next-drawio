@@ -1681,6 +1681,9 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     e.stopPropagation();
     
     const { x, y } = getPointerPosition(e.clientX, e.clientY);
+    const selectedShapes = shapes.filter(s => selectedIds.has(s.id));
+    const selectedGroupId = selectedShapes.length > 0 ? selectedShapes[0].data.groupId : null;
+    const isGroupSelection = selectedShapes.length > 1 && selectedGroupId && selectedShapes.every(s => s.data.groupId === selectedGroupId);
 
     // 右键点击时保持当前选择，不打断框选/多选
     if (e.button === 2) {
@@ -1729,6 +1732,14 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const alreadyMultiSelected = selectedIds.size > 1 && selectedIds.has(shape.id);
 
     if (alreadyMultiSelected) {
+      // 若当前是组合选中且点击组合内子图元，切换为子图元选中
+      if (isGroupSelection && groupId && groupId === selectedGroupId) {
+        setSelectedIds(new Set([shape.id]));
+        onShapeSelect?.(shape.element);
+        setIsDragging(true);
+        setDragStart({ x, y });
+        return;
+      }
       // 维持当前多选集合，直接进入拖拽
       onShapeSelect?.(shape.element);
       setIsDragging(true);
@@ -2333,8 +2344,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   useEffect(() => {
     const cleanups: Array<() => void> = [];
 
+    const selectedShapes = shapes.filter(s => selectedIds.has(s.id));
+    const selectedGroupId = selectedShapes.length > 0 ? selectedShapes[0].data.groupId : null;
+    const isGroupSelection = selectedShapes.length > 1 && selectedGroupId && selectedShapes.every(s => s.data.groupId === selectedGroupId);
+
     shapes.forEach(shape => {
       const isSelected = selectedIds.has(shape.id);
+      const showSelection = isSelected && !(isGroupSelection && shape.data.groupId === selectedGroupId);
       
       if (isSelected) {
         if (shape.type !== 'text') {
@@ -2375,9 +2391,8 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         } else {
           showPorts(shape);
           // 非选中状态不再显示缩放手柄
-          if (isSelected) {
+          if (showSelection) {
             showResizeHandles(shape);
-            // 如果是圆角矩形，显示圆角手柄
             if (shape.type === 'roundedRect') {
               showCornerHandles(shape);
             }
@@ -2428,7 +2443,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
 
       // 仅选中图元显示缩放手柄
       if (shape.type !== 'line' && shape.type !== 'connector') {
-        if (isSelected) {
+        if (showSelection)  {
           showResizeHandles(shape);
           // 如果是圆角矩形，显示圆角手柄
           if (shape.type === 'roundedRect') {
