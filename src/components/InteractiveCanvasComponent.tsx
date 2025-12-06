@@ -63,6 +63,11 @@ export interface CanvasComponentProps {
   onCanvasChange?: () => void;
   autoResize?: boolean; // 是否自动调整画布大小
   onClipboardChange?: (hasClipboard: boolean) => void;
+  onBoundsChange?: (bounds: { minX: number; minY: number; maxX: number; maxY: number }) => void;
+  pageWidth?: number;
+  pageCountX?: number;
+  pageHeight?: number;
+  pageCountY?: number;
 }
 
 interface SVGShape {
@@ -126,6 +131,11 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   onCanvasChange,
   autoResize = false,
   onClipboardChange,
+  onBoundsChange,
+  pageWidth,
+  pageCountX,
+  pageHeight,
+  pageCountY,
 }, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [shapes, setShapes] = useState<SVGShape[]>([]);
@@ -226,7 +236,9 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       y: (clientY - rect.top) * scaleY,
     };
   }, [height, width]);
-  const selectedShape = useMemo(() => {
+  
+  const lastBoundsRef = useRef<{ minX: number; minY: number; maxX: number; maxY: number } | null>(null);
+const selectedShape = useMemo(() => {
     const first = selectedIds.values().next();
     return first.done ? null : first.value;
   }, [selectedIds]);
@@ -387,6 +399,28 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const b = getShapeBounds(shape);
     return { x: b.minX, y: b.minY, w: b.maxX - b.minX, h: b.maxY - b.minY };
   }, [getShapeBounds]);
+
+  // 通知外部当前内容范围，用于自动扩展页面
+  useEffect(() => {
+    if (!onBoundsChange || shapes.length === 0) return;
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    shapes.forEach(shape => {
+      const b = getShapeBounds(shape);
+      minX = Math.min(minX, b.minX);
+      minY = Math.min(minY, b.minY);
+      maxX = Math.max(maxX, b.maxX);
+      maxY = Math.max(maxY, b.maxY);
+    });
+    const bounds = { minX, minY, maxX, maxY };
+    const last = lastBoundsRef.current;
+    if (!last || last.maxX !== bounds.maxX || last.maxY !== bounds.maxY || last.minX !== bounds.minX || last.minY !== bounds.minY) {
+      lastBoundsRef.current = bounds;
+      onBoundsChange(bounds);
+    }
+  }, [getShapeBounds, onBoundsChange, shapes]);
 
   const refreshPortsPosition = useCallback((shape: SVGShape) => {
     const ports = portElementsRef.current.get(shape.id);
@@ -2718,7 +2752,19 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        style={{ backgroundColor, width: width * zoom, height: height * zoom, position: 'relative', zIndex: 1 }}
+        style={{
+          backgroundColor,
+          left: 0,
+          top: 0,
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          minWidth: width * zoom,
+          minHeight: height * zoom,
+          position: 'absolute',
+          zIndex: 1,
+          backgroundImage: 'none',
+        }}
         className="block"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
@@ -2733,6 +2779,22 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
             <path d="M 10 0 L 0 5 L 10 10 z" fill="context-stroke" />
           </marker>
         </defs>
+        {pageWidth && pageCountX && pageCountX > 1 && (
+          <>
+            {Array.from({ length: pageCountX - 1 }).map((_, idx) => {
+              const x = pageWidth * (idx + 1);
+              return <line key={x} x1={x} y1={0} x2={x} y2={height} stroke="#d0d0d0" strokeDasharray="6,6" strokeWidth={1} />;
+            })}
+          </>
+        )}
+        {pageHeight && pageCountY && pageCountY > 1 && (
+          <>
+            {Array.from({ length: pageCountY - 1 }).map((_, idx) => {
+              const y = pageHeight * (idx + 1);
+              return <line key={`h-${y}`} x1={0} y1={y} x2={width} y2={y} stroke="#d0d0d0" strokeDasharray="6,6" strokeWidth={1} />;
+            })}
+          </>
+        )}
       </svg>
       {editingText && (
         <input

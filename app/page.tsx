@@ -38,9 +38,14 @@ import {
 } from 'lucide-react';
 import './globals.css';
 
+const PAGE_WIDTH = 1200;
+const PAGE_HEIGHT = 700;
+const PAGE_MARGIN = 200;
+const GRID_BG = 'data:image/svg+xml;base64,PHN2ZyBzdHlsZT0iY29sb3Itc2NoZW1lOiBsaWdodCBkYXJrOyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gMCAxMCBMIDQwIDEwIE0gMTAgMCBMIDEwIDQwIE0gMCAyMCBMIDQwIDIwIE0gMjAgMCBMIDIwIDQwIE0gMCAzMCBMIDQwIDMwIE0gMzAgMCBMIDMwIDQwIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOmxpZ2h0LWRhcmsoI2QwZDBkMCwgIzQyNDI0Mik7IiBzdHJva2U9IiNkMGQwZDAiIG9wYWNpdHk9IjAuMiIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6bGlnaHQtZGFyaygjZDBkMGQwLCAjNDI0MjQyKTsiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+';
+
 export default function Home() {
-  const [canvasWidth, setCanvasWidth] = useState<number>(1200);
-  const [canvasHeight, setCanvasHeight] = useState<number>(700);
+  const [canvasWidth, setCanvasWidth] = useState<number>(PAGE_WIDTH);
+  const [canvasHeight, setCanvasHeight] = useState<number>(PAGE_HEIGHT);
   const [backgroundColor, setBackgroundColor] = useState<string>('#ffffff');
   const [currentTool, setCurrentTool] = useState<ToolType>('select');
   const [isConnecting, setIsConnecting] = useState(false);
@@ -59,7 +64,8 @@ export default function Home() {
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectionCount, setSelectionCount] = useState(0);
   const [showGrid, setShowGrid] = useState(true);
-  const GRID_BG = 'data:image/svg+xml;base64,PHN2ZyBzdHlsZT0iY29sb3Itc2NoZW1lOiBsaWdodCBkYXJrOyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gMCAxMCBMIDQwIDEwIE0gMTAgMCBMIDEwIDQwIE0gMCAyMCBMIDQwIDIwIE0gMjAgMCBMIDIwIDQwIE0gMCAzMCBMIDQwIDMwIE0gMzAgMCBMIDMwIDQwIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOmxpZ2h0LWRhcmsoI2QwZDBkMCwgIzQyNDI0Mik7IiBzdHJva2U9IiNkMGQwZDAiIG9wYWNpdHk9IjAuMiIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6bGlnaHQtZGFyaygjZDBkMGQwLCAjNDI0MjQyKTsiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+';
+  const [pageCountX, setPageCountX] = useState(1);
+  const [pageCountY, setPageCountY] = useState(1);
   const canvasRef = useRef<CanvasComponentRef | null>(null);
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
 
@@ -103,6 +109,11 @@ export default function Home() {
   useEffect(() => {
     setZoomInput(String(Math.round(zoom * 100)));
   }, [zoom]);
+
+  useEffect(() => {
+    setCanvasWidth(PAGE_WIDTH * pageCountX);
+    setCanvasHeight(PAGE_HEIGHT * pageCountY);
+  }, [pageCountX, pageCountY]);
 
   useEffect(() => {
     if (!contextMenu.open || !contextMenuRef.current) return;
@@ -466,6 +477,13 @@ export default function Home() {
     e.preventDefault();
   }, []);
 
+  const handleBoundsChange = useCallback((bounds: { minX: number; minY: number; maxX: number; maxY: number }) => {
+    const nextPageCountX = Math.max(1, Math.ceil((bounds.maxX + PAGE_MARGIN) / PAGE_WIDTH));
+    const nextPageCountY = Math.max(1, Math.ceil((bounds.maxY + PAGE_MARGIN) / PAGE_HEIGHT));
+    setPageCountX(prev => (prev === nextPageCountX ? prev : nextPageCountX));
+    setPageCountY(prev => (prev === nextPageCountY ? prev : nextPageCountY));
+  }, []);
+
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, open: true });
@@ -619,7 +637,7 @@ export default function Home() {
         { label: 'v29.2.3', disabled: true },
       ],
     },
-    ], [clipboardReady, canRedo, canUndo, handleArrowChange, handleBringToFront, handleCopy, handleCut, handleDelete, handleDuplicate, handleMoveBackward, handleMoveForward, handlePaste, handleRedo, handleSendToBack, handleUndo, handleUngroup, hasSelection, multiSelected, showGrid]);;
+    ], [clipboardReady, canRedo, canUndo, handleArrowChange, handleBringToFront, handleCopy, handleCut, handleDelete, handleDuplicate, handleMoveBackward, handleMoveForward, handlePaste, handleRedo, handleSendToBack, handleUndo, handleUngroup, hasSelection, multiSelected, showGrid]);
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
@@ -1099,7 +1117,7 @@ export default function Home() {
           onDrop={handleCanvasDrop}
           onDragOver={handleCanvasDragOver}
         >
-          <div className="relative" style={{ backgroundColor: '#ffffff' }}>
+          <div className="relative" style={{ backgroundColor: '#ffffff', width: PAGE_WIDTH * pageCountX * zoom, height: canvasHeight * zoom }}>
             {showGrid && (
               <div
                 className="absolute inset-0 pointer-events-none"
@@ -1111,14 +1129,21 @@ export default function Home() {
                   backgroundPosition: '-1px -1px',
                   overflow: 'hidden',
                   zIndex: 0,
+                  width: PAGE_WIDTH * pageCountX * zoom,
+                  height: canvasHeight * zoom,
                 }}
               />
             )}
             <InteractiveCanvasComponent
               ref={canvasRef}
-              width={canvasWidth}
-              height={canvasHeight}
+              width={PAGE_WIDTH * pageCountX}
+              height={PAGE_HEIGHT * pageCountY}
               backgroundColor={showGrid ? 'transparent' : backgroundColor}
+              pageWidth={PAGE_WIDTH}
+              pageCountX={pageCountX}
+              pageHeight={PAGE_HEIGHT}
+              pageCountY={pageCountY}
+              onBoundsChange={handleBoundsChange}
               onReady={handleCanvasReady}
               onError={handleCanvasError}
               onShapeSelect={handleShapeSelect}
