@@ -2338,10 +2338,10 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       
       if (isSelected) {
         if (shape.type !== 'text') {
-          const originalWidth = shape.data.strokeWidth ?? 1;
-          shape.element.setAttribute('stroke', '#60a5fa');
-          shape.element.setAttribute('stroke-width', String(originalWidth));
-          shape.element.setAttribute('stroke-dasharray', '4,4');
+          // 保持原有描边，选中只通过外框/控制柄体现
+          shape.element.setAttribute('stroke', shape.data.stroke);
+          shape.element.setAttribute('stroke-width', String(shape.data.strokeWidth));
+          shape.element.removeAttribute('stroke-dasharray');
         } else {
           showTextSelection(shape);
           shape.element.setAttribute('stroke', shape.data.stroke);
