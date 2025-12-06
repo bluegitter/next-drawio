@@ -56,6 +56,8 @@ export default function Home() {
   const zoomDropdownRef = useRef<HTMLDivElement | null>(null);
   const [canPaste, setCanPaste] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean }>({ x: 0, y: 0, open: false });
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const [selectionCount, setSelectionCount] = useState(0);
   const canvasRef = useRef<CanvasComponentRef | null>(null);
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
 
@@ -73,6 +75,7 @@ export default function Home() {
     refreshHistoryState();
     setZoom(methods.getZoom ? methods.getZoom() : 1);
     setCanPaste(methods.hasClipboard ? methods.hasClipboard() : false);
+    setSelectionCount(methods.getSelectionCount ? methods.getSelectionCount() : 0);
   }, [refreshHistoryState, setZoom]);
 
   useEffect(() => {
@@ -95,6 +98,19 @@ export default function Home() {
   useEffect(() => {
     setZoomInput(String(Math.round(zoom * 100)));
   }, [zoom]);
+
+  useEffect(() => {
+    if (!contextMenu.open || !contextMenuRef.current) return;
+    const rect = contextMenuRef.current.getBoundingClientRect();
+    const padding = 8;
+    const maxX = Math.max(padding, window.innerWidth - rect.width - padding);
+    const maxY = Math.max(padding, window.innerHeight - rect.height - padding);
+    const nextX = Math.min(contextMenu.x, maxX);
+    const nextY = Math.min(contextMenu.y, maxY);
+    if (nextX !== contextMenu.x || nextY !== contextMenu.y) {
+      setContextMenu(prev => ({ ...prev, x: nextX, y: nextY }));
+    }
+  }, [contextMenu]);
 
   const handleCanvasError = useCallback((error: Error) => {
     console.error('Canvas initialization failed:', error);
@@ -150,6 +166,11 @@ export default function Home() {
 
   const handleShapeSelect = useCallback((shape: SVGElement | null) => {
     setSelectedShape(shape);
+    if (canvasMethodsRef.current?.getSelectionCount) {
+      setSelectionCount(canvasMethodsRef.current.getSelectionCount());
+    } else {
+      setSelectionCount(shape ? 1 : 0);
+    }
   }, []);
 
   const handleCanvasChange = useCallback(() => {
@@ -286,6 +307,9 @@ export default function Home() {
     const count = canvasMethodsRef.current.copySelection();
     const nextCanPaste = canvasMethodsRef.current.hasClipboard?.() ?? count > 0;
     setCanPaste(nextCanPaste);
+    if (canvasMethodsRef.current?.getSelectionCount) {
+      setSelectionCount(canvasMethodsRef.current.getSelectionCount());
+    }
   }, []);
 
   const handlePaste = useCallback(() => {
@@ -294,11 +318,46 @@ export default function Home() {
     const nextCanPaste = (canvasMethodsRef.current.hasClipboard?.() ?? (count > 0)) || canPaste;
     setCanPaste(nextCanPaste);
     refreshHistoryState();
+    if (canvasMethodsRef.current?.getSelectionCount) {
+      setSelectionCount(canvasMethodsRef.current.getSelectionCount());
+    }
   }, [canPaste, refreshHistoryState]);
 
   const handleClipboardChange = useCallback((hasClipboard: boolean) => {
     setCanPaste(hasClipboard);
   }, []);
+
+  const handleCut = useCallback(() => {
+    handleCopy();
+    handleDelete();
+    if (canvasMethodsRef.current?.getSelectionCount) {
+      setSelectionCount(canvasMethodsRef.current.getSelectionCount());
+    }
+  }, [handleCopy, handleDelete]);
+
+  const handleMoveForward = useCallback(() => {
+    canvasMethodsRef.current?.moveForward?.();
+    refreshHistoryState();
+    if (canvasMethodsRef.current?.getSelectionCount) {
+      setSelectionCount(canvasMethodsRef.current.getSelectionCount());
+    }
+  }, [refreshHistoryState]);
+
+  const handleMoveBackward = useCallback(() => {
+    canvasMethodsRef.current?.moveBackward?.();
+    refreshHistoryState();
+    if (canvasMethodsRef.current?.getSelectionCount) {
+      setSelectionCount(canvasMethodsRef.current.getSelectionCount());
+    }
+  }, [refreshHistoryState]);
+
+  const handleUngroup = useCallback(() => {
+    canvasMethodsRef.current?.ungroupSelected?.();
+    refreshHistoryState();
+    if (canvasMethodsRef.current?.getSelectionCount) {
+      setSelectionCount(canvasMethodsRef.current.getSelectionCount());
+    }
+  }, [refreshHistoryState]);
 
   const handleZoomIn = useCallback(() => {
     if (canvasMethodsRef.current?.zoomIn) {
@@ -394,7 +453,9 @@ export default function Home() {
     setContextMenu({ x: e.clientX, y: e.clientY, open: true });
   }, []);
 
-  const hasSelection = !!selectedShape;
+  const selectionCountFromCanvas = canvasMethodsRef.current?.getSelectionCount?.() ?? selectionCount;
+  const hasSelection = selectionCountFromCanvas > 0 || !!selectedShape;
+  const multiSelected = selectionCountFromCanvas > 1;
   const clipboardReady = canvasMethodsRef.current?.hasClipboard?.() ?? canPaste;
 
   const menuData = React.useMemo(() => [
@@ -436,7 +497,7 @@ export default function Home() {
         { label: '撤销', shortcut: '⌘+Z', action: handleUndo, disabled: !canUndo },
         { label: '重做', shortcut: '⌘+⇧+Z', action: handleRedo, disabled: !canRedo },
         'divider',
-        { label: '剪切', shortcut: '⌘+X', disabled: true },
+        { label: '剪切', shortcut: '⌘+X', action: handleCut, disabled: !hasSelection },
         { label: '复制', shortcut: '⌘+C', action: handleCopy, disabled: !hasSelection },
         { label: '复制为图像', shortcut: '⌘+⌥+X' },
         { label: '复制为 SVG', shortcut: '⌘+⌥+⇧+X' },
@@ -500,8 +561,8 @@ export default function Home() {
         { label: '插入', children: [{ label: '连接' }, { label: '图形' }] },
         { label: '布局', children: [{ label: '自动布局' }, { label: '层次布局' }] },
         'divider',
-        { label: '组合', shortcut: '⌘+G', disabled: true },
-        { label: '取消组合', shortcut: '⌘+⇧+U', disabled: true },
+        { label: '组合', shortcut: '⌘+G', action: () => { canvasMethodsRef.current?.combineSelected(); refreshHistoryState(); }, disabled: !multiSelected },
+        { label: '取消组合', shortcut: '⌘+⇧+U', action: handleUngroup, disabled: !hasSelection },
         { label: '移出组合', disabled: true },
         'divider',
         { label: '清除航点', shortcut: '⌥+⇧+R', disabled: true },
@@ -540,7 +601,7 @@ export default function Home() {
         { label: 'v29.2.3', disabled: true },
       ],
     },
-  ], [clipboardReady, canRedo, canUndo, handleCopy, handleDelete, handleDuplicate, handlePaste, handleRedo, handleUndo, hasSelection]);
+  ], [clipboardReady, canRedo, canUndo, handleCopy, handleCut, handleDelete, handleDuplicate, handleMoveBackward, handleMoveForward, handlePaste, handleRedo, handleUndo, handleUngroup, hasSelection, multiSelected]);
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
@@ -586,6 +647,9 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-1">
               <span>{item.label}</span>
+              {item.badge && (
+                <span className="ml-1 text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{item.badge}</span>
+              )}
             </div>
             <div className="flex items-center gap-2 text-gray-400 text-xs">
               {item.shortcut && <span>{item.shortcut}</span>}
@@ -1056,16 +1120,30 @@ export default function Home() {
           />
           <div
             className="fixed z-50 bg-white border border-gray-200 rounded shadow-lg min-w-[180px] text-sm text-gray-700"
+            ref={contextMenuRef}
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
             {[
-              { label: '删除', danger: true, action: handleDelete },
+              { label: '删除', danger: true, action: handleDelete, disabled: !hasSelection, badge: multiSelected ? String(selectionCount) : undefined },
               'divider',
-              { label: '复制', action: handleDuplicate },
-              { label: '创建副本', action: handleDuplicate },
+              { label: '剪切', action: handleCut, disabled: !hasSelection },
+              { label: '复制', action: handleCopy, disabled: !hasSelection },
+              { label: '复制为图像', disabled: true },
+              { label: '复制为 SVG', disabled: true },
+              { label: '创建副本', action: handleDuplicate, disabled: !hasSelection },
               'divider',
-              { label: '组合', action: () => { canvasMethodsRef.current?.combineSelected(); refreshHistoryState(); } },
-              { label: '取消组合', action: () => { canvasMethodsRef.current?.ungroupSelected(); refreshHistoryState(); } },
+              { label: '锁定 / 解锁', disabled: true },
+              { label: '设置为默认样式', disabled: true },
+              'divider',
+              { label: '组合', action: () => { canvasMethodsRef.current?.combineSelected(); refreshHistoryState(); }, disabled: !multiSelected },
+              { label: '取消组合', action: handleUngroup, disabled: !hasSelection },
+              { label: '对齐', disabled: true },
+              { label: '等距分布', disabled: true },
+              'divider',
+              { label: '移至最前', action: handleBringToFront, disabled: !hasSelection },
+              { label: '移至最后', action: handleSendToBack, disabled: !hasSelection },
+              { label: '上移一层', action: handleMoveForward, disabled: !hasSelection },
+              { label: '下移一层', action: handleMoveBackward, disabled: !hasSelection },
             ].map((item, idx) => {
               if (item === 'divider') {
                 return <div key={`divider-${idx}`} className="border-t border-gray-100 my-1" />;
@@ -1073,8 +1151,14 @@ export default function Home() {
               return (
                 <button
                   key={item.label}
-                  className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${item.danger ? 'text-red-600 font-semibold' : ''}`}
-                  onClick={() => { item.action?.(); closeContextMenu(); }}
+                  className={`w-full text-left px-3 py-2 ${
+                    item.danger ? 'text-red-600 font-semibold' : item.disabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'
+                  }`}
+                  onClick={() => {
+                    if (item.disabled) return;
+                    item.action?.();
+                    closeContextMenu();
+                  }}
                 >
                   {item.label}
                 </button>

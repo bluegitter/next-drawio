@@ -21,16 +21,19 @@ export interface CanvasComponentRef {
   copySelection: () => number;
   pasteClipboard: () => number;
   hasClipboard: () => boolean;
-   combineSelected: () => void;
-   ungroupSelected: () => void;
+  combineSelected: () => void;
+  ungroupSelected: () => void;
   deleteSelected: () => void;
   clearCanvas: () => void;
   exportCanvas: (format: 'png' | 'jpg' | 'svg') => void;
   getCanvas: () => SVGSVGElement | null;
   getSelectedShape: () => SVGElement | null;
-  duplicateSelected: () => void;
+  getSelectionCount: () => number;
+  duplicateSelected: (ids?: Set<string> | string[]) => { ids: string[]; mergedShapes: SVGShape[] } | void;
   bringToFront: () => void;
   sendToBack: () => void;
+  moveForward: () => void;
+  moveBackward: () => void;
   rotateSelected: (angle: number) => void;
   rotateSelectedBy: (delta: number) => void;
   flipSelectedHorizontal: () => void;
@@ -179,7 +182,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const resizeHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
   const cornerHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
   const textSelectionRef = useRef<Map<string, SVGRectElement>>(new Map());
-  const copyBufferRef = useRef<string[]>([]);
+  const copyBufferRef = useRef<{ ids: string[]; shapes: SVGShape[] } | null>(null);
   const [draggingPolylinePoint, setDraggingPolylinePoint] = useState<{ shapeId: string; index: number } | null>(null);
   const [draggingCornerHandle, setDraggingCornerHandle] = useState<{
     shapeId: string;
@@ -1831,6 +1834,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const el = selectedShape ? document.getElementById(selectedShape) : null;
     return el instanceof SVGElement ? el : null;
   }, [selectedShape]);
+  const getSelectionCount = useCallback(() => selectedIds.size, [selectedIds]);
 
   const cloneShapeWithDef = useCallback((shape: SVGShape, offset: number) => {
     const def = getDef(shape);
@@ -1845,17 +1849,51 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     return { ...shape, id, element: clonedElement, connections: [] as Array<string | null> };
   }, [createSVGElement, generateId, getDef]);
 
-  const duplicateSelected = useCallback((ids?: Set<string> | string[]) => {
+  const cloneShapeForClipboard = useCallback((shape: SVGShape) => {
+    return {
+      ...shape,
+      element: shape.element.cloneNode(true) as SVGElement,
+      data: { ...shape.data },
+      connections: shape.connections ? [...shape.connections] : [],
+    };
+  }, []);
+
+  const buildClipboardSnapshot = useCallback((selection: Set<string>, source: SVGShape[]) => {
+    const copyIds = new Set(selection);
+    source.forEach(shape => {
+      if ((shape.type === 'line' || shape.type === 'connector') && shape.connections?.length === 2) {
+        const [from, to] = shape.connections as Array<string | null | undefined>;
+        if (from && to && selection.has(from) && selection.has(to)) {
+          copyIds.add(shape.id);
+        }
+      }
+    });
+    const snapshotShapes = source.filter(s => copyIds.has(s.id)).map(cloneShapeForClipboard);
+    return { ids: Array.from(copyIds), shapes: snapshotShapes };
+  }, [cloneShapeForClipboard]);
+
+  const duplicateSelected = useCallback((ids?: Set<string> | string[], sourceShapesOverride?: SVGShape[]) => {
     const targetIds = ids ? (ids instanceof Set ? ids : new Set(ids)) : selectedIds;
     if (targetIds.size === 0 || !svgRef.current) return;
 
+    const sourceShapes = sourceShapesOverride ?? shapes;
     const offset = 20;
     const idMap = new Map<string, string>();
     const newShapes: SVGShape[] = [];
-    const ctxShapes = [...shapes];
+    const ctxShapes = [...sourceShapes];
+    const attachConnectionToNewShape = (shapeId: string, connId: string) => {
+      const idx = newShapes.findIndex(s => s.id === shapeId);
+      if (idx >= 0) {
+        const target = newShapes[idx];
+        const conns = target.connections ? [...target.connections] : [];
+        if (!conns.includes(connId)) {
+          newShapes[idx] = { ...target, connections: [...conns, connId] };
+        }
+      }
+    };
 
     // 先复制非连接类图元（包含未连接的线）
-    shapes.forEach(sourceShape => {
+    sourceShapes.forEach(sourceShape => {
       if (!targetIds.has(sourceShape.id)) return;
       const isConnectionLine = (sourceShape.type === 'line' || sourceShape.type === 'connector') && (sourceShape.connections?.some(Boolean));
       if (sourceShape.type === 'connector' || isConnectionLine) return;
@@ -1868,7 +1906,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     });
 
     // 再复制连接线（两端都在选中集合才复制）
-    shapes.forEach(sourceShape => {
+    sourceShapes.forEach(sourceShape => {
       if (!targetIds.has(sourceShape.id)) return;
       if (sourceShape.type !== 'line' && sourceShape.type !== 'connector') return;
 
@@ -1900,12 +1938,30 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       connector.setAttribute('fill', 'none');
       connector.setAttribute('cursor', 'pointer');
 
-      const startPoint = getPortPositionById(fromShape, sourceShape.data.startPortId) || getShapeCenter(fromShape);
-      const endPoint = getPortPositionById(toShape, sourceShape.data.endPortId) || getShapeCenter(toShape);
-      connector.setAttribute('x1', String(startPoint.x));
-      connector.setAttribute('y1', String(startPoint.y));
-      connector.setAttribute('x2', String(endPoint.x));
-      connector.setAttribute('y2', String(endPoint.y));
+      const resolvePort = (shape: SVGShape, originalPortId?: string | null) => {
+        const ports = getPortsForShape(shape);
+        if (originalPortId) {
+          const byExact = ports.find(p => p.id === originalPortId);
+          if (byExact) return byExact;
+          const suffix = originalPortId.split('-port-')[1];
+          if (suffix) {
+            const bySuffix = ports.find(p => p.id.endsWith(suffix) || (p as any).position === suffix);
+            if (bySuffix) return bySuffix;
+          }
+          const byPosition = ports.find(p => (p as any).position && originalPortId.endsWith((p as any).position));
+          if (byPosition) return byPosition;
+        }
+        return ports[0] || getShapeCenter(shape);
+      };
+
+      const startPortPos = resolvePort(fromShape, sourceShape.data.startPortId);
+      const endPortPos = resolvePort(toShape, sourceShape.data.endPortId);
+      const resolvedStartPortId = (startPortPos as any)?.id || sourceShape.data.startPortId || null;
+      const resolvedEndPortId = (endPortPos as any)?.id || sourceShape.data.endPortId || null;
+      connector.setAttribute('x1', String(startPortPos.x));
+      connector.setAttribute('y1', String(startPortPos.y));
+      connector.setAttribute('x2', String(endPortPos.x));
+      connector.setAttribute('y2', String(endPortPos.y));
 
       const duplicatedShape: SVGShape = {
         ...sourceShape,
@@ -1913,47 +1969,55 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         element: connector,
         data: {
           ...sourceShape.data,
-          x1: startPoint.x,
-          y1: startPoint.y,
-          x2: endPoint.x,
-          y2: endPoint.y,
+          x1: startPortPos.x,
+          y1: startPortPos.y,
+          x2: endPortPos.x,
+          y2: endPortPos.y,
+          startPortId: resolvedStartPortId,
+          endPortId: resolvedEndPortId,
         },
         connections: [newFrom, newTo],
       };
       svgRef.current.appendChild(connector);
       newShapes.push(duplicatedShape);
+      attachConnectionToNewShape(newFrom, newId);
+      attachConnectionToNewShape(newTo, newId);
     });
 
     if (newShapes.length === 0) return;
 
-    const mergedShapes = [...shapes, ...newShapes];
+    const mergedShapes = sourceShapesOverride ? [...shapes, ...newShapes] : [...sourceShapes, ...newShapes];
     setShapesState(() => mergedShapes);
     const newIds = newShapes.map(s => s.id);
     setSelectedIds(new Set(newIds));
-    copyBufferRef.current = newIds;
-    onClipboardChange?.(copyBufferRef.current.length > 0);
+    copyBufferRef.current = { ids: newIds, shapes: newShapes.map(cloneShapeForClipboard) };
+    onClipboardChange?.((copyBufferRef.current?.ids.length || 0) > 0);
     onShapeSelect?.(mergedShapes.find(s => s.id === newIds[0])?.element || null);
     saveToHistory(mergedShapes, newIds);
-    return newIds;
-  }, [applyTransform, cloneShapeWithDef, createSVGElement, generateId, getPortPositionById, getShapeCenter, onClipboardChange, onShapeSelect, saveToHistory, selectedIds, shapes]);
+    return { ids: newIds, mergedShapes };
+  }, [applyTransform, cloneShapeForClipboard, cloneShapeWithDef, createSVGElement, generateId, getPortPositionById, getShapeCenter, onClipboardChange, onShapeSelect, saveToHistory, selectedIds, shapes]);
 
   const copySelection = useCallback(() => {
     if (selectedIds.size === 0) return 0;
-    copyBufferRef.current = Array.from(selectedIds);
-    onClipboardChange?.(copyBufferRef.current.length > 0);
-    return copyBufferRef.current.length;
-  }, [onClipboardChange, selectedIds]);
+    const snapshot = buildClipboardSnapshot(selectedIds, shapes);
+    copyBufferRef.current = snapshot;
+    onClipboardChange?.(snapshot.ids.length > 0);
+    return snapshot.ids.length;
+  }, [buildClipboardSnapshot, onClipboardChange, selectedIds, shapes]);
 
   const pasteClipboard = useCallback(() => {
-    if (copyBufferRef.current.length === 0) return 0;
-    const newIds = duplicateSelected(copyBufferRef.current);
-    if (newIds && newIds.length) {
-      copyBufferRef.current = newIds;
-      onClipboardChange?.(copyBufferRef.current.length > 0);
-      return newIds.length;
+    if (!copyBufferRef.current || copyBufferRef.current.ids.length === 0) return 0;
+    const buffer = copyBufferRef.current;
+    const result = duplicateSelected(new Set(buffer.ids), buffer.shapes);
+    if (result && result.ids.length) {
+      const newSelection = new Set(result.ids);
+      const snapshot = buildClipboardSnapshot(newSelection, result.mergedShapes);
+      copyBufferRef.current = snapshot.ids.length ? snapshot : { ids: result.ids, shapes: buffer.shapes };
+      onClipboardChange?.((copyBufferRef.current?.ids.length || 0) > 0);
+      return result.ids.length;
     }
     return 0;
-  }, [duplicateSelected, onClipboardChange]);
+  }, [buildClipboardSnapshot, duplicateSelected, onClipboardChange]);
 
   const bringToFront = useCallback(() => {
     if (!selectedShape || !svgRef.current) return;
@@ -1979,6 +2043,50 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     setShapesState(() => reordered);
     saveToHistory(reordered, selectedIds);
   }, [saveToHistory, selectedIds, selectedShape, shapes]);
+
+  const moveForward = useCallback(() => {
+    if (selectedIds.size === 0 || !svgRef.current) return;
+    const ids = Array.from(selectedIds);
+    const next = [...shapes];
+    let changed = false;
+    ids.forEach(id => {
+      const idx = next.findIndex(s => s.id === id);
+      if (idx >= 0 && idx < next.length - 1) {
+        const [item] = next.splice(idx, 1);
+        next.splice(idx + 1, 0, item);
+        const afterSibling = item.element.nextSibling ? item.element.nextSibling.nextSibling : null;
+        svgRef.current!.insertBefore(item.element, afterSibling);
+        changed = true;
+      }
+    });
+    if (changed) {
+      setShapesState(() => next);
+      saveToHistory(next, selectedIds);
+    }
+  }, [saveToHistory, selectedIds, shapes, setShapesState]);
+
+  const moveBackward = useCallback(() => {
+    if (selectedIds.size === 0 || !svgRef.current) return;
+    const ids = Array.from(selectedIds);
+    const next = [...shapes];
+    let changed = false;
+    ids.forEach(id => {
+      const idx = next.findIndex(s => s.id === id);
+      if (idx > 0) {
+        const [item] = next.splice(idx, 1);
+        next.splice(idx - 1, 0, item);
+        const prevSibling = item.element.previousSibling;
+        if (prevSibling) {
+          svgRef.current!.insertBefore(item.element, prevSibling);
+        }
+        changed = true;
+      }
+    });
+    if (changed) {
+      setShapesState(() => next);
+      saveToHistory(next, selectedIds);
+    }
+  }, [saveToHistory, selectedIds, shapes, setShapesState]);
 
   const rotateSelected = useCallback((angle: number) => {
     updateSelectedShape(shape => {
@@ -2386,18 +2494,21 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         deleteSelected();
       } else if (meta && e.key.toLowerCase() === 'c') {
         e.preventDefault();
-        copyBufferRef.current = Array.from(selectedIds);
-        onClipboardChange?.(copyBufferRef.current.length > 0);
+        const snapshot = buildClipboardSnapshot(selectedIds, shapes);
+        copyBufferRef.current = snapshot;
+        onClipboardChange?.((copyBufferRef.current?.ids.length || 0) > 0);
       } else if (meta && e.key.toLowerCase() === 'd') {
         e.preventDefault();
         duplicateSelected();
       } else if (meta && e.key.toLowerCase() === 'v') {
         e.preventDefault();
-        if (copyBufferRef.current.length > 0) {
-          const newIds = duplicateSelected(copyBufferRef.current);
-          if (newIds && newIds.length) {
-            copyBufferRef.current = newIds;
-            onClipboardChange?.(copyBufferRef.current.length > 0);
+        if (copyBufferRef.current && copyBufferRef.current.ids.length > 0) {
+          const result = duplicateSelected(new Set(copyBufferRef.current.ids), copyBufferRef.current.shapes);
+          if (result && result.ids.length) {
+            const newSelection = new Set(result.ids);
+            const snapshot = buildClipboardSnapshot(newSelection, result.mergedShapes);
+            copyBufferRef.current = snapshot.ids.length ? snapshot : copyBufferRef.current;
+            onClipboardChange?.((copyBufferRef.current?.ids.length || 0) > 0);
           }
         }
       } else if (meta && e.key.toLowerCase() === 'z') {
@@ -2451,9 +2562,12 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     exportCanvas,
     getCanvas: () => svgRef.current,
     getSelectedShape,
+    getSelectionCount,
     duplicateSelected,
     bringToFront,
     sendToBack,
+    moveForward,
+    moveBackward,
     rotateSelected,
     rotateSelectedBy,
     flipSelectedHorizontal,
@@ -2476,7 +2590,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     getZoom: () => zoom,
     copySelection,
     pasteClipboard,
-    hasClipboard: () => copyBufferRef.current.length > 0,
+    hasClipboard: () => Boolean(copyBufferRef.current && copyBufferRef.current.ids.length > 0),
   };
 
   // 始终暴露最新方法（避免旧引用缺少新增方法）
