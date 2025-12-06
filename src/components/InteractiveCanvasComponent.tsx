@@ -24,6 +24,8 @@ export interface CanvasComponentRef {
   hasClipboard: () => boolean;
   combineSelected: () => void;
   ungroupSelected: () => void;
+  selectAll: () => void;
+  clearSelection: () => void;
   deleteSelected: () => void;
   clearCanvas: () => void;
   exportCanvas: (format: 'png' | 'jpg' | 'svg') => void;
@@ -1877,10 +1879,40 @@ const selectedShape = useMemo(() => {
 
     setShapesState(() => updatedShapes);
     setSelectedIds(new Set());
+    selectedIdsRef.current = new Set();
     setHoveredShapeId(null);
     onShapeSelect?.(null);
     saveToHistory(updatedShapes, []);
   }, [hideConnectorHandles, hidePorts, hideResizeHandles, hideCornerHandles, onShapeSelect, saveToHistory, selectedIds, shapes]);
+
+  const clearSelection = useCallback(() => {
+    hidePorts();
+    hideConnectorHandles();
+    hideResizeHandles();
+    hideCornerHandles();
+    hideTextSelection();
+    const empty = new Set<string>();
+    selectedIdsRef.current = empty;
+    setSelectedIds(empty);
+    setSelectedShape(null);
+    setHoveredShapeId(null);
+    onShapeSelect?.(null);
+  }, [hideConnectorHandles, hideCornerHandles, hidePorts, hideResizeHandles, hideTextSelection, onShapeSelect]);
+
+  const selectAllShapes = useCallback(() => {
+    if (shapes.length === 0) {
+      clearSelection();
+      return;
+    }
+    const allIds = shapes.map(s => s.id);
+    const next = new Set(allIds);
+    selectedIdsRef.current = next;
+    setSelectedIds(next);
+    const first = shapes[0];
+    if (first) {
+      onShapeSelect?.(first.element);
+    }
+  }, [clearSelection, onShapeSelect, shapes]);
 
   const clearCanvas = useCallback(() => {
     if (!svgRef.current) return;
@@ -1904,7 +1936,7 @@ const selectedShape = useMemo(() => {
     const el = selectedShape ? document.getElementById(selectedShape) : null;
     return el instanceof SVGElement ? el : null;
   }, [selectedShape]);
-  const getSelectionCount = useCallback(() => selectedIds.size, [selectedIds]);
+  const getSelectionCount = useCallback(() => selectedIdsRef.current.size, []);
 
   const cloneShapeWithDef = useCallback((shape: SVGShape, offset: number) => {
     const def = getDef(shape);
@@ -2646,6 +2678,12 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
       } else if (meta && (e.key.toLowerCase() === 'y')) {
         e.preventDefault();
         redo();
+      } else if (meta && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        clearSelection();
+      } else if (meta && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        selectAllShapes();
       } else if (meta && e.key.toLowerCase() === 'g') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -2668,7 +2706,7 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [combineSelected, deleteSelected, duplicateSelected, isConnecting, redo, tempLine, undo, selectedIds, ungroupSelected]);
+  }, [clearSelection, combineSelected, deleteSelected, duplicateSelected, isConnecting, redo, selectAllShapes, tempLine, undo, selectedIds, ungroupSelected]);
 
   // 创建方法对象
   const methods: CanvasComponentRef = {
@@ -2680,6 +2718,8 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
     addPolyline,
     addText,
     addSvgIcon,
+    selectAll: selectAllShapes,
+    clearSelection,
     combineSelected,
     ungroupSelected,
     deleteSelected,

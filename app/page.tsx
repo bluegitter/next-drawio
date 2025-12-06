@@ -269,6 +269,20 @@ export default function Home() {
     }
   }, [refreshHistoryState]);
 
+  const handleSelectAll = useCallback(() => {
+    canvasMethodsRef.current?.selectAll?.();
+    if (canvasMethodsRef.current?.getSelectionCount) {
+      setSelectionCount(canvasMethodsRef.current.getSelectionCount());
+    }
+    setSelectedShape(canvasMethodsRef.current?.getSelectedShape?.() || null);
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    canvasMethodsRef.current?.clearSelection?.();
+    setSelectionCount(0);
+    setSelectedShape(null);
+  }, []);
+
   const handleRotateLeft = useCallback(() => {
     if (canvasMethodsRef.current) {
       canvasMethodsRef.current.rotateSelectedBy(-90);
@@ -546,8 +560,8 @@ export default function Home() {
         'divider',
         { label: '选择顶点', shortcut: '⌘+⇧+I' },
         { label: '选择边线', shortcut: '⌘+⇧+E' },
-        { label: '全选', shortcut: '⌘+A' },
-        { label: '全不选', shortcut: '⌘+⇧+A' },
+        { label: '全选', shortcut: '⌘+A', action: handleSelectAll },
+        { label: '全不选', shortcut: '⌘+⇧+A', action: handleClearSelection },
       ],
     },
     {
@@ -637,7 +651,7 @@ export default function Home() {
         { label: 'v29.2.3', disabled: true },
       ],
     },
-    ], [clipboardReady, canRedo, canUndo, handleArrowChange, handleBringToFront, handleCopy, handleCut, handleDelete, handleDuplicate, handleMoveBackward, handleMoveForward, handlePaste, handleRedo, handleSendToBack, handleUndo, handleUngroup, hasSelection, multiSelected, showGrid]);
+    ], [clipboardReady, canRedo, canUndo, handleArrowChange, handleBringToFront, handleClearSelection, handleCopy, handleCut, handleDelete, handleDuplicate, handleMoveBackward, handleMoveForward, handlePaste, handleRedo, handleSelectAll, handleSendToBack, handleUndo, handleUngroup, hasSelection, multiSelected, showGrid]);
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
