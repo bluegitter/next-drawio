@@ -2718,7 +2718,7 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        style={{ backgroundColor, width: width * zoom, height: height * zoom }}
+        style={{ backgroundColor, width: width * zoom, height: height * zoom, position: 'relative', zIndex: 1 }}
         className="block"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}

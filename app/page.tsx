@@ -58,6 +58,8 @@ export default function Home() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean }>({ x: 0, y: 0, open: false });
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectionCount, setSelectionCount] = useState(0);
+  const [showGrid, setShowGrid] = useState(true);
+  const GRID_BG = 'data:image/svg+xml;base64,PHN2ZyBzdHlsZT0iY29sb3Itc2NoZW1lOiBsaWdodCBkYXJrOyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gMCAxMCBMIDQwIDEwIE0gMTAgMCBMIDEwIDQwIE0gMCAyMCBMIDQwIDIwIE0gMjAgMCBMIDIwIDQwIE0gMCAzMCBMIDQwIDMwIE0gMzAgMCBMIDMwIDQwIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOmxpZ2h0LWRhcmsoI2QwZDBkMCwgIzQyNDI0Mik7IiBzdHJva2U9IiNkMGQwZDAiIG9wYWNpdHk9IjAuMiIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6bGlnaHQtZGFyaygjZDBkMGQwLCAjNDI0MjQyKTsiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+';
   const canvasRef = useRef<CanvasComponentRef | null>(null);
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
 
@@ -549,7 +551,7 @@ export default function Home() {
         { label: '提示', checked: true },
         { label: '动画', checked: true },
         'divider',
-        { label: '网格', checked: true, shortcut: '⌘+⇧+G' },
+        { label: '网格', shortcut: '⌘+⇧+G', checked: showGrid, action: () => setShowGrid(v => !v) },
         { label: '参考线', checked: true },
         { label: '连接箭头', shortcut: '⌥+⇧+A' },
         { label: '连接点', shortcut: '⌥+⇧+O' },
@@ -617,7 +619,7 @@ export default function Home() {
         { label: 'v29.2.3', disabled: true },
       ],
     },
-  ], [clipboardReady, canRedo, canUndo, handleCopy, handleCut, handleDelete, handleDuplicate, handleMoveBackward, handleMoveForward, handlePaste, handleRedo, handleUndo, handleUngroup, hasSelection, multiSelected]);
+    ], [clipboardReady, canRedo, canUndo, handleArrowChange, handleBringToFront, handleCopy, handleCut, handleDelete, handleDuplicate, handleMoveBackward, handleMoveForward, handlePaste, handleRedo, handleSendToBack, handleUndo, handleUngroup, hasSelection, multiSelected, showGrid]);;
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
@@ -1097,19 +1099,26 @@ export default function Home() {
           onDrop={handleCanvasDrop}
           onDragOver={handleCanvasDragOver}
         >
-          <div
-            className="relative"
-            style={{
-              backgroundImage:
-                'linear-gradient(#e5e5e5 1px, transparent 1px), linear-gradient(90deg, #e5e5e5 1px, transparent 1px)',
-              backgroundSize: '20px 20px',
-            }}
-          >
+          <div className="relative" style={{ backgroundColor: '#ffffff' }}>
+            {showGrid && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: '#ffffff',
+                  backgroundImage: `url(${GRID_BG})`,
+                  backgroundPosition: '-1px -1px',
+                  overflow: 'hidden',
+                  zIndex: 0,
+                }}
+              />
+            )}
             <InteractiveCanvasComponent
               ref={canvasRef}
               width={canvasWidth}
               height={canvasHeight}
-              backgroundColor={backgroundColor}
+              backgroundColor={showGrid ? 'transparent' : backgroundColor}
               onReady={handleCanvasReady}
               onError={handleCanvasError}
               onShapeSelect={handleShapeSelect}
