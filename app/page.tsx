@@ -62,10 +62,13 @@ export default function Home() {
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
 
   const refreshHistoryState = useCallback(() => {
-    if (canvasMethodsRef.current) {
-      setCanUndo(canvasMethodsRef.current.canUndo());
-      setCanRedo(canvasMethodsRef.current.canRedo());
-    }
+    if (!canvasMethodsRef.current) return;
+    const nextUndo = canvasMethodsRef.current.canUndo();
+    const nextRedo = canvasMethodsRef.current.canRedo();
+    requestAnimationFrame(() => {
+      setCanUndo(nextUndo);
+      setCanRedo(nextRedo);
+    });
   }, []);
 
   const handleCanvasReady = useCallback((canvas: SVGSVGElement, methods: CanvasComponentRef) => {
@@ -220,6 +223,10 @@ export default function Home() {
       refreshHistoryState();
     }
   }, [refreshHistoryState]);
+
+  const handleArrowChange = useCallback((mode: 'none' | 'start' | 'end' | 'both') => {
+    canvasMethodsRef.current?.changeSelectedArrow?.(mode);
+  }, []);
 
   const handleDelete = useCallback(() => {
     if (canvasMethodsRef.current) {
@@ -1124,6 +1131,7 @@ export default function Home() {
               onRotationChange={handleRotationChange}
               onScaleChange={handleScaleChange}
               onOpacityChange={handleOpacityChange}
+              onArrowChange={handleArrowChange}
               onDelete={handleDelete}
               onDuplicate={handleDuplicate}
               onBringToFront={handleBringToFront}

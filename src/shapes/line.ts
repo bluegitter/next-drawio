@@ -12,7 +12,7 @@ export const lineShape: ShapeDefinition = {
     line.setAttribute('y1', String(y1));
     line.setAttribute('x2', String(x2));
     line.setAttribute('y2', String(y2));
-    line.setAttribute('stroke', '#6b7280');
+    line.setAttribute('stroke', '#000000');
     line.setAttribute('stroke-width', '2');
     line.setAttribute('fill', 'none');
     line.setAttribute('cursor', 'pointer');
@@ -20,7 +20,7 @@ export const lineShape: ShapeDefinition = {
       id,
       type: 'line',
       element: line,
-      data: { x1, y1, x2, y2, stroke: '#6b7280', strokeWidth: 2 },
+      data: { x1, y1, x2, y2, stroke: '#000000', strokeWidth: 2, arrowMode: 'none' },
       connections: [null, null],
     };
   },

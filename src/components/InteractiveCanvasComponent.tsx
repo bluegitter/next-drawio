@@ -43,6 +43,7 @@ export interface CanvasComponentRef {
   changeSelectedFill: (color: string) => void;
   changeSelectedStroke: (color: string) => void;
   changeSelectedStrokeWidth: (width: number) => void;
+  changeSelectedArrow: (mode: 'none' | 'start' | 'end' | 'both') => void;
   changeSelectedOpacity: (opacity: number) => void;
   undo: () => void;
   redo: () => void;
@@ -97,6 +98,7 @@ interface SVGShape {
     flipX?: boolean;
     flipY?: boolean;
     opacity: number;
+    arrowMode?: 'none' | 'start' | 'end' | 'both';
   };
   connections?: Array<string | null>; // 连接到的图形ID
 }
@@ -2255,7 +2257,33 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     saveToHistory(updatedShapes, targetIds);
   }, [saveToHistory, selectedIds, shapes, updateCylinderPath]);
 
-  const changeSelectedOpacity = useCallback((opacity: number) => {
+  
+  const updateLineMarkers = useCallback((shape: SVGShape) => {
+    if (shape.type !== 'line') return;
+    const mode = shape.data.arrowMode || 'none';
+    const el = shape.element as SVGLineElement;
+    const start = mode === 'start' || mode === 'both' ? 'url(#arrow-start-marker)' : '';
+    const end = mode === 'end' || mode === 'both' ? 'url(#arrow-end-marker)' : '';
+    if (start) el.setAttribute('marker-start', start); else el.removeAttribute('marker-start');
+    if (end) el.setAttribute('marker-end', end); else el.removeAttribute('marker-end');
+    // ensure data stays in sync
+    shape.data.arrowMode = mode;
+  }, []);
+
+  const changeSelectedArrow = useCallback((mode: 'none' | 'start' | 'end' | 'both') => {
+    const targetIds = selectedIdsRef.current.size ? selectedIdsRef.current : selectedIds;
+    if (targetIds.size === 0) return;
+    const updatedShapes = shapes.map(shape => {
+      if (!targetIds.has(shape.id)) return shape;
+      if (shape.type !== 'line') return shape;
+      const nextShape = { ...shape, data: { ...shape.data, arrowMode: mode } };
+      updateLineMarkers(nextShape);
+      return nextShape;
+    });
+    setShapesState(() => updatedShapes);
+    saveToHistory(updatedShapes, targetIds);
+  }, [saveToHistory, selectedIds, shapes, updateLineMarkers]);
+const changeSelectedOpacity = useCallback((opacity: number) => {
     const targetIds = selectedIdsRef.current.size ? selectedIdsRef.current : selectedIds;
     if (targetIds.size === 0) return;
     const safeOpacity = Math.min(1, Math.max(0, opacity));
@@ -2639,6 +2667,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     changeSelectedFill,
     changeSelectedStroke,
     changeSelectedStrokeWidth,
+    changeSelectedArrow,
     changeSelectedOpacity,
     undo,
     redo,
@@ -2695,7 +2724,16 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onClick={handleCanvasClick}
-      />
+      >
+        <defs>
+          <marker id="arrow-end-marker" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
+          </marker>
+          <marker id="arrow-start-marker" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 10 0 L 0 5 L 10 10 z" fill="context-stroke" />
+          </marker>
+        </defs>
+      </svg>
       {editingText && (
         <input
           ref={editingInputRef}

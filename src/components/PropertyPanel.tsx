@@ -17,6 +17,7 @@ export interface PropertyPanelProps {
   onDuplicate?: () => void;
   onBringToFront?: () => void;
   onSendToBack?: () => void;
+  onArrowChange?: (mode: 'none' | 'start' | 'end' | 'both') => void;
 }
 
 export const PropertyPanel: React.FC<PropertyPanelProps> = ({
@@ -31,6 +32,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   onDuplicate,
   onBringToFront,
   onSendToBack,
+  onArrowChange,
 }) => {
   const [fillColor, setFillColor] = useState('#3b82f6');
   const [strokeColor, setStrokeColor] = useState('#1e40af');
@@ -38,14 +40,14 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const [rotation, setRotation] = useState(0);
   const [scale, setScale] = useState(1);
   const [opacity, setOpacity] = useState(1);
+  const [arrowMode, setArrowMode] = useState<'none' | 'start' | 'end' | 'both'>('none');
   const [tab, setTab] = useState<'style' | 'text' | 'shape'>('style');
   const [fillEnabled, setFillEnabled] = useState(true);
   const [strokeEnabled, setStrokeEnabled] = useState(true);
 
-  // 从选中图形中提取属性
+
   useEffect(() => {
     if (!selectedShape) return;
-
     const fill = selectedShape.getAttribute('fill') || '#000000';
     const stroke = selectedShape.getAttribute('stroke') || '#000000';
     const strokeWidthAttr = selectedShape.getAttribute('stroke-width') || '2';
@@ -79,8 +81,20 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     } else {
       setScale(1);
     }
-  }, [selectedShape]);
 
+    if (selectedShape.tagName.toLowerCase() === 'line') {
+      const start = selectedShape.getAttribute('marker-start');
+      const end = selectedShape.getAttribute('marker-end');
+      let mode: 'none' | 'start' | 'end' | 'both' = 'none';
+      if (start && end) mode = 'both';
+      else if (end) mode = 'end';
+      else if (start) mode = 'start';
+      setArrowMode(mode);
+      if (tab !== 'shape') setTab('shape');
+    } else {
+      setArrowMode('none');
+    }
+  }, [selectedShape]);
   const handleFillChange = useCallback((color: string) => {
     setFillColor(color);
     onFillChange?.(color);
@@ -119,6 +133,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   ];
 
   const isText = useMemo(() => selectedShape?.tagName.toLowerCase() === 'foreignobject', [selectedShape]);
+  const isLine = useMemo(() => selectedShape?.tagName.toLowerCase() === 'line', [selectedShape]);
 
   if (!selectedShape) {
     return (
@@ -275,6 +290,24 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
               <Button size="sm" variant="outline" onClick={onBringToFront}>移至最前</Button>
               <Button size="sm" variant="outline" onClick={onSendToBack}>移至最后</Button>
             </div>
+            {isLine && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700">箭头</span>
+                <select
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  value={arrowMode}
+                  onChange={(e) => {
+                    const mode = e.target.value as 'none' | 'start' | 'end' | 'both';
+                    setArrowMode(mode);
+                    onArrowChange?.(mode);
+                  }}
+                >
+                  <option value="none">无</option>
+                  <option value="end">单向</option>
+                  <option value="both">双向</option>
+                </select>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-700">旋转</span>
               <Input
