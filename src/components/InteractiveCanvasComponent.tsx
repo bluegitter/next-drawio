@@ -135,6 +135,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const [isResizing, setIsResizing] = useState(false);
   const [isSelectingBox, setIsSelectingBox] = useState(false);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const selectionOriginRef = useRef<{ x: number; y: number } | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -1447,15 +1448,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       }
       
       setDragStart({ x, y });
-    } else if (isSelectingBox && selectionRect) {
-      const w = x - selectionRect.x;
-      const h = y - selectionRect.y;
-      setSelectionRect({
-        x: w >= 0 ? selectionRect.x : x,
-        y: h >= 0 ? selectionRect.y : y,
-        w: Math.abs(w),
-        h: Math.abs(h),
-      });
+    } else if (isSelectingBox && selectionOriginRef.current) {
+      const start = selectionOriginRef.current;
+      const minX = Math.min(start.x, x);
+      const minY = Math.min(start.y, y);
+      const w = Math.abs(x - start.x);
+      const h = Math.abs(y - start.y);
+      setSelectionRect({ x: minX, y: minY, w, h });
     } else if (!isConnecting && !isDragging && !isResizing && !draggingHandle) {
       const padding = 10;
       let hovered: SVGShape | null = null;
@@ -1649,6 +1648,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
 
     setIsSelectingBox(false);
     setSelectionRect(null);
+    selectionOriginRef.current = null;
 
     // 保持线段/连接线选中状态
     const target = e.target as SVGElement;
@@ -2432,6 +2432,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       const { x, y } = getPointerPosition(e.clientX, e.clientY);
       setIsSelectingBox(true);
       setSelectionRect({ x, y, w: 0, h: 0 });
+      selectionOriginRef.current = { x, y };
       setSelectedShape(null);
       onShapeSelect?.(null);
     }
