@@ -64,10 +64,13 @@ export default function Home() {
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectionCount, setSelectionCount] = useState(0);
   const [showGrid, setShowGrid] = useState(true);
-  const [pageCountX, setPageCountX] = useState(1);
+  const [pageCountX, setPageCountX] = useState(1); // pages to the right/bottom from origin
   const [pageCountY, setPageCountY] = useState(1);
+  const [pageNegX, setPageNegX] = useState(0); // pages to the left of origin
+  const [pageNegY, setPageNegY] = useState(0); // pages above origin
   const canvasRef = useRef<CanvasComponentRef | null>(null);
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const refreshHistoryState = useCallback(() => {
     if (!canvasMethodsRef.current) return;
@@ -111,9 +114,11 @@ export default function Home() {
   }, [zoom]);
 
   useEffect(() => {
-    setCanvasWidth(PAGE_WIDTH * pageCountX);
-    setCanvasHeight(PAGE_HEIGHT * pageCountY);
-  }, [pageCountX, pageCountY]);
+    const totalX = pageNegX + pageCountX;
+    const totalY = pageNegY + pageCountY;
+    setCanvasWidth(PAGE_WIDTH * totalX);
+    setCanvasHeight(PAGE_HEIGHT * totalY);
+  }, [pageCountX, pageCountY, pageNegX, pageNegY]);
 
   useEffect(() => {
     if (!contextMenu.open || !contextMenuRef.current) return;
@@ -330,11 +335,13 @@ export default function Home() {
     if (!svg) return null;
     const rect = svg.getBoundingClientRect();
     if (!rect.width || !rect.height) return null;
+    const totalWidth = PAGE_WIDTH * (pageNegX + pageCountX);
+    const totalHeight = PAGE_HEIGHT * (pageNegY + pageCountY);
     return {
-      x: ((clientX - rect.left) * canvasWidth) / rect.width,
-      y: ((clientY - rect.top) * canvasHeight) / rect.height,
+      x: ((clientX - rect.left) * totalWidth) / rect.width - pageNegX * PAGE_WIDTH,
+      y: ((clientY - rect.top) * totalHeight) / rect.height - pageNegY * PAGE_HEIGHT,
     };
-  }, [canvasHeight, canvasWidth]);
+  }, [pageCountX, pageCountY, pageNegX, pageNegY]);
 
   const handleCopy = useCallback(() => {
     if (!canvasMethodsRef.current?.copySelection) return;
@@ -492,11 +499,43 @@ export default function Home() {
   }, []);
 
   const handleBoundsChange = useCallback((bounds: { minX: number; minY: number; maxX: number; maxY: number }) => {
-    const nextPageCountX = Math.max(1, Math.ceil((bounds.maxX + PAGE_MARGIN) / PAGE_WIDTH));
-    const nextPageCountY = Math.max(1, Math.ceil((bounds.maxY + PAGE_MARGIN) / PAGE_HEIGHT));
-    setPageCountX(prev => (prev === nextPageCountX ? prev : nextPageCountX));
-    setPageCountY(prev => (prev === nextPageCountY ? prev : nextPageCountY));
-  }, []);
+    const STEP = 0.5; // expand by half a page when crossing a boundary
+    const totalPagesX = pageNegX + pageCountX;
+    const totalPagesY = pageNegY + pageCountY;
+    const currentMinX = -pageNegX * PAGE_WIDTH;
+    const currentMaxX = currentMinX + totalPagesX * PAGE_WIDTH;
+    const currentMinY = -pageNegY * PAGE_HEIGHT;
+    const currentMaxY = currentMinY + totalPagesY * PAGE_HEIGHT;
+
+    const needsExpand = bounds.maxX > currentMaxX || bounds.minX < currentMinX || bounds.maxY > currentMaxY || bounds.minY < currentMinY;
+    if (!needsExpand) return;
+
+    const nextNegX = bounds.minX < currentMinX ? pageNegX + STEP : pageNegX;
+    const nextNegY = bounds.minY < currentMinY ? pageNegY + STEP : pageNegY;
+    const nextPosX = bounds.maxX > currentMaxX ? pageCountX + STEP : pageCountX;
+    const nextPosY = bounds.maxY > currentMaxY ? pageCountY + STEP : pageCountY;
+
+    const deltaNegX = nextNegX - pageNegX;
+    const deltaNegY = nextNegY - pageNegY;
+
+    setPageNegX(prev => (prev === nextNegX ? prev : nextNegX));
+    setPageNegY(prev => (prev === nextNegY ? prev : nextNegY));
+    setPageCountX(prev => (prev === nextPosX ? prev : nextPosX));
+    setPageCountY(prev => (prev === nextPosY ? prev : nextPosY));
+
+    if ((deltaNegX !== 0 || deltaNegY !== 0) && scrollContainerRef.current) {
+      const scroller = scrollContainerRef.current;
+      const newLeft = scroller.scrollLeft + deltaNegX * PAGE_WIDTH * zoom;
+      const newTop = scroller.scrollTop + deltaNegY * PAGE_HEIGHT * zoom;
+      requestAnimationFrame(() => {
+        scroller.scrollTo({
+          left: Math.max(0, newLeft),
+          top: Math.max(0, newTop),
+          behavior: 'instant' as ScrollBehavior,
+        });
+      });
+    }
+  }, [pageCountX, pageCountY, pageNegX, pageNegY, zoom]);
 
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -1126,12 +1165,21 @@ export default function Home() {
 
         {/* 画布区 */}
         <div
-          className="flex-1 bg-[#eaeaea] overflow-auto flex justify-center items-start p-4"
+          className="flex-1 bg-[#eaeaea] overflow-auto flex justify-start items-start p-4"
+          style={{ paddingLeft: 24 }}
+          ref={scrollContainerRef}
           onContextMenu={handleCanvasContextMenu}
           onDrop={handleCanvasDrop}
           onDragOver={handleCanvasDragOver}
         >
-          <div className="relative" style={{ backgroundColor: '#ffffff', width: PAGE_WIDTH * pageCountX * zoom, height: canvasHeight * zoom }}>
+          <div
+            className="relative"
+            style={{
+              backgroundColor: '#ffffff',
+              width: PAGE_WIDTH * (pageNegX + pageCountX) * zoom,
+              height: PAGE_HEIGHT * (pageNegY + pageCountY) * zoom,
+            }}
+          >
             {showGrid && (
               <div
                 className="absolute inset-0 pointer-events-none"
@@ -1143,20 +1191,22 @@ export default function Home() {
                   backgroundPosition: '-1px -1px',
                   overflow: 'hidden',
                   zIndex: 0,
-                  width: PAGE_WIDTH * pageCountX * zoom,
-                  height: canvasHeight * zoom,
+                  width: PAGE_WIDTH * (pageNegX + pageCountX) * zoom,
+                  height: PAGE_HEIGHT * (pageNegY + pageCountY) * zoom,
                 }}
               />
             )}
             <InteractiveCanvasComponent
               ref={canvasRef}
-              width={PAGE_WIDTH * pageCountX}
-              height={PAGE_HEIGHT * pageCountY}
+              width={PAGE_WIDTH * (pageNegX + pageCountX)}
+              height={PAGE_HEIGHT * (pageNegY + pageCountY)}
               backgroundColor={showGrid ? 'transparent' : backgroundColor}
               pageWidth={PAGE_WIDTH}
-              pageCountX={pageCountX}
+              pageCountX={pageNegX + pageCountX}
+              pageOffsetXPages={pageNegX}
               pageHeight={PAGE_HEIGHT}
-              pageCountY={pageCountY}
+              pageCountY={pageNegY + pageCountY}
+              pageOffsetYPages={pageNegY}
               onBoundsChange={handleBoundsChange}
               onReady={handleCanvasReady}
               onError={handleCanvasError}

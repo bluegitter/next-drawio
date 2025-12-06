@@ -70,6 +70,8 @@ export interface CanvasComponentProps {
   pageCountX?: number;
   pageHeight?: number;
   pageCountY?: number;
+  pageOffsetXPages?: number;
+  pageOffsetYPages?: number;
 }
 
 interface SVGShape {
@@ -138,6 +140,8 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   pageCountX,
   pageHeight,
   pageCountY,
+  pageOffsetXPages = 0,
+  pageOffsetYPages = 0,
 }, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [shapes, setShapes] = useState<SVGShape[]>([]);
@@ -227,6 +231,11 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     });
     return result;
   }, [clampZoom]);
+  const viewBoxMinX = useMemo(() => -(pageOffsetXPages || 0) * (pageWidth || 0), [pageOffsetXPages, pageWidth]);
+  const viewBoxMinY = useMemo(() => -(pageOffsetYPages || 0) * (pageHeight || 0), [pageHeight, pageOffsetYPages]);
+  const viewBoxMaxX = useMemo(() => viewBoxMinX + width, [viewBoxMinX, width]);
+  const viewBoxMaxY = useMemo(() => viewBoxMinY + height, [viewBoxMinY, height]);
+
   const getPointerPosition = useCallback((clientX: number, clientY: number) => {
     if (!svgRef.current) return { x: 0, y: 0 };
     const rect = svgRef.current.getBoundingClientRect();
@@ -234,10 +243,10 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const scaleX = width / rect.width;
     const scaleY = height / rect.height;
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
+      x: (clientX - rect.left) * scaleX + viewBoxMinX,
+      y: (clientY - rect.top) * scaleY + viewBoxMinY,
     };
-  }, [height, width]);
+  }, [height, width, viewBoxMinX, viewBoxMinY]);
   
   const lastBoundsRef = useRef<{ minX: number; minY: number; maxX: number; maxY: number } | null>(null);
 const selectedShape = useMemo(() => {
@@ -2782,6 +2791,9 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
     }
   }, [onReady]);
 
+  const lineCountX = pageCountX ? Math.floor(pageCountX) : 0;
+  const lineCountY = pageCountY ? Math.floor(pageCountY) : 0;
+
   return (
     <div
       className="relative border border-gray-300 rounded"
@@ -2791,7 +2803,7 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
         ref={svgRef}
         width={width}
         height={height}
-        viewBox={`0 0 ${width} ${height}`}
+        viewBox={`${viewBoxMinX} ${viewBoxMinY} ${width} ${height}`}
         style={{
           backgroundColor,
           left: 0,
@@ -2819,18 +2831,18 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
             <path d="M 10 0 L 0 5 L 10 10 z" fill="context-stroke" />
           </marker>
         </defs>
-        {pageWidth && pageCountX && pageCountX > 1 && (
+        {pageWidth && lineCountX > 1 && (
           <>
-            {Array.from({ length: pageCountX - 1 }).map((_, idx) => {
-              const x = pageWidth * (idx + 1);
+            {Array.from({ length: lineCountX - 1 }).map((_, idx) => {
+              const x = -viewBoxMinX + pageWidth * (idx + 1);
               return <line key={x} x1={x} y1={0} x2={x} y2={height} stroke="#d0d0d0" strokeDasharray="6,6" strokeWidth={1} />;
             })}
           </>
         )}
-        {pageHeight && pageCountY && pageCountY > 1 && (
+        {pageHeight && lineCountY > 1 && (
           <>
-            {Array.from({ length: pageCountY - 1 }).map((_, idx) => {
-              const y = pageHeight * (idx + 1);
+            {Array.from({ length: lineCountY - 1 }).map((_, idx) => {
+              const y = -viewBoxMinY + pageHeight * (idx + 1);
               return <line key={`h-${y}`} x1={0} y1={y} x2={width} y2={y} stroke="#d0d0d0" strokeDasharray="6,6" strokeWidth={1} />;
             })}
           </>
@@ -2876,8 +2888,8 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
         <div
           className="absolute border-2 border-blue-400 border-dashed bg-blue-200/20 pointer-events-none"
           style={{
-            left: selectionRect.x * zoom,
-            top: selectionRect.y * zoom,
+            left: (selectionRect.x - viewBoxMinX) * zoom,
+            top: (selectionRect.y - viewBoxMinY) * zoom,
             width: selectionRect.w * zoom,
             height: selectionRect.h * zoom,
           }}
@@ -2887,8 +2899,8 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
         <div
           className="absolute pointer-events-none"
           style={{
-            left: groupSelectionBounds.x * zoom,
-            top: groupSelectionBounds.y * zoom,
+            left: (groupSelectionBounds.x - viewBoxMinX) * zoom,
+            top: (groupSelectionBounds.y - viewBoxMinY) * zoom,
             width: groupSelectionBounds.w * zoom,
             height: groupSelectionBounds.h * zoom,
           }}
