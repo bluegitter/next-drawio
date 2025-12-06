@@ -1456,6 +1456,33 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       const w = Math.abs(x - start.x);
       const h = Math.abs(y - start.y);
       setSelectionRect({ x: minX, y: minY, w, h });
+    } else if (draggingHandle) {
+      // 拖动连接端点时，始终尝试显示附近图元的 port
+      const padding = 12;
+      let hovered: SVGShape | null = null;
+      for (let i = shapes.length - 1; i >= 0; i--) {
+        const shape = shapes[i];
+        if (shape.type === 'connector') continue;
+        const bounds = getShapeBounds(shape);
+        if (
+          x >= bounds.minX - padding &&
+          x <= bounds.maxX + padding &&
+          y >= bounds.minY - padding &&
+          y <= bounds.maxY + padding
+        ) {
+          hovered = shape;
+          break;
+        }
+      }
+
+      if (hovered && hovered.id !== hoveredShapeId) {
+        if (hoveredShapeId) hidePorts(hoveredShapeId);
+        setHoveredShapeId(hovered.id);
+        showPorts(hovered);
+      } else if (!hovered && hoveredShapeId) {
+        hidePorts(hoveredShapeId);
+        setHoveredShapeId(null);
+      }
     } else if (!isConnecting && !isDragging && !isResizing && !draggingHandle) {
       const padding = 10;
       let hovered: SVGShape | null = null;
