@@ -3,7 +3,7 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { EnhancedToolbar, ToolType } from '@/components/EnhancedToolbar';
+import { ToolType } from '@/components/EnhancedToolbar';
 import InteractiveCanvasComponent, { CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
 import PropertyPanel from '@/components/PropertyPanel';
 import { SHAPE_ICONS, CHECK_ICON, GENERAL_SHAPE_LIBRARY } from '@/constants/svgIcons';
@@ -40,15 +40,13 @@ import './globals.css';
 
 const PAGE_WIDTH = 1200;
 const PAGE_HEIGHT = 700;
-const PAGE_MARGIN = 200;
 const GRID_BG = 'data:image/svg+xml;base64,PHN2ZyBzdHlsZT0iY29sb3Itc2NoZW1lOiBsaWdodCBkYXJrOyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gMCAxMCBMIDQwIDEwIE0gMTAgMCBMIDEwIDQwIE0gMCAyMCBMIDQwIDIwIE0gMjAgMCBMIDIwIDQwIE0gMCAzMCBMIDQwIDMwIE0gMzAgMCBMIDMwIDQwIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOmxpZ2h0LWRhcmsoI2QwZDBkMCwgIzQyNDI0Mik7IiBzdHJva2U9IiNkMGQwZDAiIG9wYWNpdHk9IjAuMiIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6bGlnaHQtZGFyaygjZDBkMGQwLCAjNDI0MjQyKTsiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+';
 
 export default function Home() {
   const [canvasWidth, setCanvasWidth] = useState<number>(PAGE_WIDTH);
   const [canvasHeight, setCanvasHeight] = useState<number>(PAGE_HEIGHT);
-  const [backgroundColor, setBackgroundColor] = useState<string>('#ffffff');
+  const [backgroundColor] = useState<string>('#ffffff');
   const [currentTool, setCurrentTool] = useState<ToolType>('select');
-  const [isConnecting, setIsConnecting] = useState(false);
   const [selectedShape, setSelectedShape] = useState<SVGElement | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -140,7 +138,6 @@ export default function Home() {
 
   const handleToolChange = useCallback((tool: ToolType) => {
     setCurrentTool(tool);
-    setIsConnecting(tool === 'connect');
     
     if (canvasMethodsRef.current) {
       switch (tool) {
@@ -179,12 +176,6 @@ export default function Home() {
       refreshHistoryState();
     }
   }, [refreshHistoryState]);
-
-  const handleExport = useCallback((format: 'png' | 'jpg' | 'svg') => {
-    if (canvasMethodsRef.current) {
-      canvasMethodsRef.current.exportCanvas(format);
-    }
-  }, []);
 
   const handleShapeSelect = useCallback((shape: SVGElement | null) => {
     setSelectedShape(shape);
@@ -873,7 +864,7 @@ export default function Home() {
                   <Input
                     type="number"
                     value={zoomInput}
-                    onChange={(e) => setZoomInput(e.target.value)}
+                    onChange={(value) => setZoomInput(value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleApplyCustomZoom(); }}
                     className="h-8 text-sm"
                     min={MIN_ZOOM * 100}
@@ -1296,44 +1287,45 @@ export default function Home() {
             ref={contextMenuRef}
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
-            {[
+            {([
               { label: '删除', danger: true, action: handleDelete, disabled: !hasSelection, badge: multiSelected ? String(selectionCount) : undefined },
-              'divider',
+              { type: 'divider' as const },
               { label: '剪切', action: handleCut, disabled: !hasSelection },
               { label: '复制', action: handleCopy, disabled: !hasSelection },
               { label: '复制为图像', disabled: true },
               { label: '复制为 SVG', disabled: true },
               { label: '创建副本', action: handleDuplicate, disabled: !hasSelection },
-              'divider',
+              { type: 'divider' as const },
               { label: '锁定 / 解锁', disabled: true },
               { label: '设置为默认样式', disabled: true },
-              'divider',
+              { type: 'divider' as const },
               { label: '组合', action: () => { canvasMethodsRef.current?.combineSelected(); refreshHistoryState(); }, disabled: !multiSelected },
               { label: '取消组合', action: handleUngroup, disabled: !hasSelection },
               { label: '对齐', disabled: true },
               { label: '等距分布', disabled: true },
-              'divider',
+              { type: 'divider' as const },
               { label: '移至最前', action: handleBringToFront, disabled: !hasSelection },
               { label: '移至最后', action: handleSendToBack, disabled: !hasSelection },
               { label: '上移一层', action: handleMoveForward, disabled: !hasSelection },
               { label: '下移一层', action: handleMoveBackward, disabled: !hasSelection },
-            ].map((item, idx) => {
-              if (item === 'divider') {
+            ] as const).map((item, idx) => {
+              if ('type' in item && item.type === 'divider') {
                 return <div key={`divider-${idx}`} className="border-t border-gray-100 my-1" />;
               }
+              const menuItem = item as Exclude<typeof item, { type: 'divider' }>;
               return (
                 <button
-                  key={item.label}
+                  key={menuItem.label}
                   className={`w-full text-left px-3 py-2 ${
-                    item.danger ? 'text-red-600 font-semibold' : item.disabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'
+                    'danger' in menuItem && menuItem.danger ? 'text-red-600 font-semibold' : 'disabled' in menuItem && menuItem.disabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'
                   }`}
                   onClick={() => {
-                    if (item.disabled) return;
-                    item.action?.();
+                    if ('disabled' in menuItem && menuItem.disabled) return;
+                    if ('action' in menuItem) menuItem.action?.();
                     closeContextMenu();
                   }}
                 >
-                  {item.label}
+                  {menuItem.label}
                 </button>
               );
             })}

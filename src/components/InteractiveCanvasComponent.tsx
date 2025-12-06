@@ -101,6 +101,10 @@ interface SVGShape {
     startPortId?: string | null;
     endPortId?: string | null;
     groupId?: string | null;
+    href?: string;
+    originalHref?: string;
+    originalSvgText?: string;
+    iconName?: string;
     fill: string;
     stroke: string;
     strokeWidth: number;
@@ -317,7 +321,6 @@ const selectedShape = useMemo(() => {
 
   // 创建命名空间
   const createSVGElement = useCallback((tagName: string) => {
-    if (!svgRef.current) return null;
     return document.createElementNS('http://www.w3.org/2000/svg', tagName);
   }, []);
 
