@@ -37,8 +37,8 @@ const pathShapeFactory = (type: string, blueprint: Array<{ x: number; y: number 
     const height = 90;
     const points = normalizePoints(x, y, width, height, blueprint);
     path.setAttribute('id', id);
-    path.setAttribute('fill', '#ffffff');
-    path.setAttribute('stroke', '#1f2937');
+    path.setAttribute('fill', 'transparent');
+    path.setAttribute('stroke', '#000000');
     path.setAttribute('stroke-width', '2');
     path.setAttribute('cursor', 'move');
     const shape = {
@@ -50,8 +50,8 @@ const pathShapeFactory = (type: string, blueprint: Array<{ x: number; y: number 
         y,
         width,
         height,
-        fill: '#ffffff',
-        stroke: '#1f2937',
+        fill: 'transparent',
+        stroke: '#000000',
         strokeWidth: 2,
         rotation: 0,
         scale: 1,
@@ -225,8 +225,8 @@ export const cloudShape: ShapeDefinition = {
     const width = 160;
     const height = 110;
     path.setAttribute('id', id);
-    path.setAttribute('fill', '#ffffff');
-    path.setAttribute('stroke', '#1f2937');
+    path.setAttribute('fill', 'transparent');
+    path.setAttribute('stroke', '#000000');
     path.setAttribute('stroke-width', '2');
     path.setAttribute('cursor', 'move');
     const shape = {
@@ -238,8 +238,8 @@ export const cloudShape: ShapeDefinition = {
         y,
         width,
         height,
-        fill: '#ffffff',
-        stroke: '#1f2937',
+        fill: 'transparent',
+        stroke: '#000000',
         strokeWidth: 2,
         rotation: 0,
         scale: 1,
@@ -335,8 +335,8 @@ export const ellipseShape: ShapeDefinition = {
     el.setAttribute('cy', String(cy));
     el.setAttribute('rx', String(rx));
     el.setAttribute('ry', String(ry));
-    el.setAttribute('fill', '#ffffff');
-    el.setAttribute('stroke', '#1f2937');
+    el.setAttribute('fill', 'transparent');
+    el.setAttribute('stroke', '#000000');
     el.setAttribute('stroke-width', '2');
     el.setAttribute('cursor', 'move');
     return {
@@ -348,8 +348,8 @@ export const ellipseShape: ShapeDefinition = {
         cy,
         rx,
         ry,
-        fill: '#ffffff',
-        stroke: '#1f2937',
+        fill: 'transparent',
+        stroke: '#000000',
         strokeWidth: 2,
         rotation: 0,
         scale: 1,
@@ -424,8 +424,8 @@ export const cylinderShape: ShapeDefinition = {
     bodyPath.setAttribute('class', 'cylinder-body');
     rimPath.setAttribute('class', 'cylinder-rim');
     [bodyPath, rimPath].forEach(path => {
-      path.setAttribute('fill', '#ffffff');
-      path.setAttribute('stroke', '#1f2937');
+      path.setAttribute('fill', 'transparent');
+      path.setAttribute('stroke', '#000000');
       path.setAttribute('stroke-width', '2');
       path.setAttribute('cursor', 'move');
     });
@@ -446,8 +446,8 @@ export const cylinderShape: ShapeDefinition = {
         height,
         rx,
         ry,
-        fill: '#ffffff',
-        stroke: '#1f2937',
+        fill: 'transparent',
+        stroke: '#000000',
         strokeWidth: 2,
         rotation: 0,
         scale: 1,
@@ -561,7 +561,7 @@ export function updateCylinderPath(shape: any) {
   ].join(' ');
 
   bodyPath.setAttribute('d', bodyD);
-  bodyPath.setAttribute('fill', fill);
+  bodyPath.setAttribute('fill', shape.data.fill ?? 'transparent');
   bodyPath.setAttribute('stroke', stroke);
   bodyPath.setAttribute('stroke-width', String(strokeWidth));
   bodyPath.setAttribute('opacity', String(shape.data.opacity ?? 1));
@@ -577,7 +577,7 @@ export function updateCloudPath(shape: any) {
   const { x, y, width, height, fill, stroke, strokeWidth, opacity } = shape.data;
   const d = buildCloudD(x, y, width, height);
   shape.element.setAttribute('d', d);
-  shape.element.setAttribute('fill', fill);
+  shape.element.setAttribute('fill', shape.data.fill ?? 'transparent');
   shape.element.setAttribute('stroke', stroke);
   shape.element.setAttribute('stroke-width', String(strokeWidth));
   shape.element.setAttribute('opacity', String(opacity ?? 1));

@@ -18,8 +18,8 @@ export const roundedRectShape: ShapeDefinition = {
     rect.setAttribute('height', String(height));
     rect.setAttribute('rx', String(cornerRadius));
     rect.setAttribute('ry', String(cornerRadius));
-    rect.setAttribute('fill', '#8b5cf6'); // 紫色用于区分圆角矩形
-    rect.setAttribute('stroke', '#6d28d9');
+    rect.setAttribute('fill', 'transparent');
+    rect.setAttribute('stroke', '#000000');
     rect.setAttribute('stroke-width', '2');
     rect.setAttribute('cursor', 'move');
     return {
@@ -27,8 +27,8 @@ export const roundedRectShape: ShapeDefinition = {
       element: rect,
       data: {
         x, y, width, height, cornerRadius,
-        fill: '#8b5cf6',
-        stroke: '#6d28d9',
+        fill: 'transparent',
+        stroke: '#000000',
         strokeWidth: 2,
         rotation: 0,
         scale: 1,

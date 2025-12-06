@@ -15,8 +15,8 @@ export const rectShape: ShapeDefinition = {
     rect.setAttribute('y', String(y));
     rect.setAttribute('width', String(width));
     rect.setAttribute('height', String(height));
-    rect.setAttribute('fill', '#3b82f6');
-    rect.setAttribute('stroke', '#1e40af');
+    rect.setAttribute('fill', 'transparent');
+    rect.setAttribute('stroke', '#000000');
     rect.setAttribute('stroke-width', '2');
     rect.setAttribute('cursor', 'move');
     return {
@@ -24,8 +24,8 @@ export const rectShape: ShapeDefinition = {
       element: rect,
       data: {
         x, y, width, height,
-        fill: '#3b82f6',
-        stroke: '#1e40af',
+        fill: 'transparent',
+        stroke: '#000000',
         strokeWidth: 2,
         rotation: 0,
         scale: 1,

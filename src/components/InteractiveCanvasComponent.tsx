@@ -1700,68 +1700,63 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       return;
     }
 
-    if (e.shiftKey && selectedShape) {
-      // Shift+点击创建连接
-      startConnection(selectedShape);
+    if (e.metaKey || e.ctrlKey) {
+      console.log('Ctrl/Cmd+Click for multi-selection');
+      const next = new Set(selectedIds);
+      if (next.has(shape.id)) {
+        next.delete(shape.id);
+        console.log('Removing shape from selection:', shape.id);
+      } else {
+        next.add(shape.id);
+        console.log('Adding shape to selection:', shape.id);
+      }
+      console.log('New selection:', Array.from(next));
+      setSelectedIds(next);
+      // 如果还有选中的图形，调用onShapeSelect
+      if (next.size > 0) {
+        const firstSelectedId = Array.from(next)[0];
+        const firstSelectedShape = shapes.find(s => s.id === firstSelectedId);
+        if (firstSelectedShape) {
+          onShapeSelect?.(firstSelectedShape.element);
+        }
+      } else {
+        onShapeSelect?.(null);
+      }
+      return;
+    }
+    
+    const groupId = shape.data.groupId;
+    const alreadyMultiSelected = selectedIds.size > 1 && selectedIds.has(shape.id);
+
+    if (alreadyMultiSelected) {
+      // 维持当前多选集合，直接进入拖拽
+      onShapeSelect?.(shape.element);
+      setIsDragging(true);
+      setDragStart({ x, y });
+      return;
+    }
+
+    if (groupId) {
+      const groupIds = shapes.filter(s => s.data.groupId === groupId).map(s => s.id);
+      console.log('Shape is in group, selecting all group members:', groupIds);
+      setSelectedIds(new Set(groupIds));
+      onShapeSelect?.(shape.element);
     } else {
-      if (e.metaKey || e.ctrlKey) {
-        console.log('Ctrl/Cmd+Click for multi-selection');
-        const next = new Set(selectedIds);
-        if (next.has(shape.id)) {
-          next.delete(shape.id);
-          console.log('Removing shape from selection:', shape.id);
-        } else {
-          next.add(shape.id);
-          console.log('Adding shape to selection:', shape.id);
-        }
-        console.log('New selection:', Array.from(next));
-        setSelectedIds(next);
-        // 如果还有选中的图形，调用onShapeSelect
-        if (next.size > 0) {
-          const firstSelectedId = Array.from(next)[0];
-          const firstSelectedShape = shapes.find(s => s.id === firstSelectedId);
-          if (firstSelectedShape) {
-            onShapeSelect?.(firstSelectedShape.element);
-          }
-        } else {
-          onShapeSelect?.(null);
-        }
-        return;
-      }
-      
-      const groupId = shape.data.groupId;
-      const alreadyMultiSelected = selectedIds.size > 1 && selectedIds.has(shape.id);
-
-      if (alreadyMultiSelected) {
-        // 维持当前多选集合，直接进入拖拽
-        onShapeSelect?.(shape.element);
-        setIsDragging(true);
-        setDragStart({ x, y });
-        return;
-      }
-
-      if (groupId) {
-        const groupIds = shapes.filter(s => s.data.groupId === groupId).map(s => s.id);
-        console.log('Shape is in group, selecting all group members:', groupIds);
-        setSelectedIds(new Set(groupIds));
-        onShapeSelect?.(shape.element);
-      } else {
-        // 普通点击，只选中当前图形
-        console.log('Normal click, selecting single shape:', shape.id);
-        setSelectedIds(new Set([shape.id]));
-        onShapeSelect?.(shape.element);
-      }
-      // 连接线/直线：无连接时可整体拖动；有连接时仅选中
-      if ((shape.type === 'line' || shape.type === 'connector') && !isLineConnected(shape)) {
-        setIsDragging(true);
-        setDragStart({ x, y });
-      } else if (shape.type !== 'line' && shape.type !== 'connector') {
-        // 记录拖拽起始位置
-        setIsDragging(true);
-        setDragStart({ x, y });
-      } else {
-        setIsDragging(false);
-      }
+      // 普通点击，只选中当前图形
+      console.log('Normal click, selecting single shape:', shape.id);
+      setSelectedIds(new Set([shape.id]));
+      onShapeSelect?.(shape.element);
+    }
+    // 连接线/直线：无连接时可整体拖动；有连接时仅选中
+    if ((shape.type === 'line' || shape.type === 'connector') && !isLineConnected(shape)) {
+      setIsDragging(true);
+      setDragStart({ x, y });
+    } else if (shape.type !== 'line' && shape.type !== 'connector') {
+      // 记录拖拽起始位置
+      setIsDragging(true);
+      setDragStart({ x, y });
+    } else {
+      setIsDragging(false);
     }
   }, [connectShapes, connectionStart, connectionStartPort, isConnecting, isLineConnected, onShapeSelect, selectedIds, selectedShape, startConnection]);
 

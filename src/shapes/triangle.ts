@@ -19,7 +19,7 @@ export const triangleShape: ShapeDefinition = {
     const points = makeTrianglePoints(cx, cy, 100);
     poly.setAttribute('id', id);
     poly.setAttribute('points', points);
-    poly.setAttribute('fill', '#f59e0b');
+    poly.setAttribute('fill', 'transparent');
     poly.setAttribute('stroke', '#d97706');
     poly.setAttribute('stroke-width', '2');
     poly.setAttribute('cursor', 'move');
@@ -29,7 +29,7 @@ export const triangleShape: ShapeDefinition = {
       element: poly,
       data: {
         points,
-        fill: '#f59e0b',
+        fill: 'transparent',
         stroke: '#d97706',
         strokeWidth: 2,
         rotation: 0,

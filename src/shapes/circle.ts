@@ -13,7 +13,7 @@ export const circleShape: ShapeDefinition = {
     circle.setAttribute('cx', String(x));
     circle.setAttribute('cy', String(y));
     circle.setAttribute('r', String(radius));
-    circle.setAttribute('fill', '#22c55e');
+    circle.setAttribute('fill', 'transparent');
     circle.setAttribute('stroke', '#166534');
     circle.setAttribute('stroke-width', '2');
     circle.setAttribute('cursor', 'move');
@@ -22,7 +22,7 @@ export const circleShape: ShapeDefinition = {
       element: circle,
       data: {
         x, y, radius,
-        fill: '#22c55e',
+        fill: 'transparent',
         stroke: '#166534',
         strokeWidth: 2,
         rotation: 0,
