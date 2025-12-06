@@ -71,6 +71,7 @@ export default function Home() {
   const canvasRef = useRef<CanvasComponentRef | null>(null);
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const refreshHistoryState = useCallback(() => {
     if (!canvasMethodsRef.current) return;
@@ -498,6 +499,29 @@ export default function Home() {
     e.preventDefault();
   }, []);
 
+  const handleSaveFile = useCallback(() => {
+    if (!canvasMethodsRef.current?.exportJson) return;
+    const json = canvasMethodsRef.current.exportJson();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'diagram.drawio.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleOpenFile = useCallback((file?: File) => {
+    const targetFile = file ?? fileInputRef.current?.files?.[0];
+    if (!targetFile) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result?.toString() ?? '';
+      canvasMethodsRef.current?.importJson?.(text);
+    };
+    reader.readAsText(targetFile);
+  }, []);
+
   const handleBoundsChange = useCallback((bounds: { minX: number; minY: number; maxX: number; maxY: number }) => {
     const STEP = 0.5; // expand by half a page when crossing a boundary
     const totalPagesX = pageNegX + pageCountX;
@@ -785,7 +809,17 @@ export default function Home() {
           </div>
         </div>
         <div className="ml-auto">
-          <Button size="sm" variant="ghost" className="border border-gray-300">🧑‍💻 共享</Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" className="border border-gray-300" onClick={handleSaveFile}>保存</Button>
+            <Button size="sm" variant="ghost" className="border border-gray-300" onClick={() => fileInputRef.current?.click()}>打开</Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => handleOpenFile(e.target.files?.[0])}
+            />
+          </div>
         </div>
       </div>
 

@@ -32,6 +32,8 @@ export interface CanvasComponentRef {
   getCanvas: () => SVGSVGElement | null;
   getSelectedShape: () => SVGElement | null;
   getSelectionCount: () => number;
+  exportJson: () => string;
+  importJson: (payload: string) => void;
   duplicateSelected: (ids?: Set<string> | string[]) => { ids: string[]; mergedShapes: SVGShape[] } | void;
   bringToFront: () => void;
   sendToBack: () => void;
@@ -2399,6 +2401,84 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
   const canUndo = useCallback(() => historyIndex > 0, [historyIndex]);
   const canRedo = useCallback(() => historyIndex < history.length - 1, [history.length, historyIndex]);
 
+  const exportJson = useCallback(() => {
+    const payload = {
+      shapes: shapes.map(s => ({
+        id: s.id,
+        type: s.type,
+        data: s.data,
+        connections: s.connections,
+        element: (s.element as SVGElement).outerHTML,
+      })),
+    };
+    return JSON.stringify(payload);
+  }, [shapes]);
+
+  const importJson = useCallback((payload: string) => {
+    try {
+      const parsed = JSON.parse(payload);
+      if (!parsed?.shapes || !Array.isArray(parsed.shapes)) return;
+      if (!svgRef.current) return;
+
+      // 清空当前图元（保留既有 defs 等静态内容）
+      shapes.forEach(s => {
+        if (svgRef.current?.contains(s.element)) {
+          svgRef.current.removeChild(s.element);
+        }
+      });
+
+      const parser = new DOMParser();
+      const xlinkNS = 'http://www.w3.org/1999/xlink';
+      const restored: SVGShape[] = parsed.shapes.map((item: any) => {
+        const data = item.data || {};
+
+        let element: SVGElement;
+        if (item.type === 'image') {
+          // 重新构建 image，确保 href/xlink:href 正确设置
+          const img = createSVGElement('image');
+          img.setAttribute('id', item.id);
+          if (data.x != null) img.setAttribute('x', String(data.x));
+          if (data.y != null) img.setAttribute('y', String(data.y));
+          if (data.width != null) img.setAttribute('width', String(data.width));
+          if (data.height != null) img.setAttribute('height', String(data.height));
+          const hrefVal = data.href || data.originalHref || '';
+          img.setAttribute('href', hrefVal);
+          img.setAttributeNS(xlinkNS, 'xlink:href', hrefVal);
+          img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          if (data.stroke) img.setAttribute('stroke', data.stroke);
+          if (data.strokeWidth != null) img.setAttribute('stroke-width', String(data.strokeWidth));
+          element = img;
+        } else {
+          const doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${item.element || ''}</svg>`, 'image/svg+xml');
+          const el = doc.documentElement.firstElementChild as SVGElement | null;
+          element = el || createSVGElement('g');
+          element.setAttribute('id', item.id);
+        }
+
+        svgRef.current!.appendChild(element);
+        return {
+          id: item.id,
+          type: item.type,
+          element,
+          data,
+          connections: item.connections,
+        } as SVGShape;
+      });
+
+      setShapesState(() => restored);
+      const initSelected = new Set<string>();
+      setSelectedIds(initSelected);
+      selectedIdsRef.current = initSelected;
+      setHistory([{ shapes: restored, selectedIds: [] }]);
+      setHistoryIndex(0);
+      onShapeSelect?.(null);
+      onClipboardChange?.(false);
+      saveToHistory(restored, []);
+    } catch (err) {
+      console.error('Failed to import json', err);
+    }
+  }, [createSVGElement, onClipboardChange, onShapeSelect, saveToHistory, setShapesState, shapes]);
+
   const exportCanvas = useCallback((format: 'png' | 'jpg' | 'svg') => {
     if (!svgRef.current) return;
 
@@ -2754,6 +2834,8 @@ const changeSelectedOpacity = useCallback((opacity: number) => {
     changeSelectedOpacity,
     undo,
     redo,
+    exportJson,
+    importJson,
     startConnection,
     connectShapes,
     canUndo,
