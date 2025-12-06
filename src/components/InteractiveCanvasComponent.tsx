@@ -14,6 +14,13 @@ export interface CanvasComponentRef {
   addText: () => void;
   addSvgIcon: (href: string, options?: { width?: number; height?: number; position?: { x: number; y: number }; iconName?: string }) => void;
   addShapeAt: (type: string, position: { x: number; y: number }) => void;
+  setZoom: (zoom: number) => number;
+  zoomIn: (factor?: number) => number;
+  zoomOut: (factor?: number) => number;
+  getZoom: () => number;
+  copySelection: () => number;
+  pasteClipboard: () => number;
+  hasClipboard: () => boolean;
    combineSelected: () => void;
    ungroupSelected: () => void;
   deleteSelected: () => void;
@@ -50,6 +57,7 @@ export interface CanvasComponentProps {
   onShapeSelect?: (shape: SVGElement | null) => void;
   onCanvasChange?: () => void;
   autoResize?: boolean; // 是否自动调整画布大小
+  onClipboardChange?: (hasClipboard: boolean) => void;
 }
 
 interface SVGShape {
@@ -111,6 +119,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   onShapeSelect,
   onCanvasChange,
   autoResize = false,
+  onClipboardChange,
 }, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [shapes, setShapes] = useState<SVGShape[]>([]);
@@ -118,6 +127,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryState[]>([{ shapes: [], selectedIds: [] }]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [zoom, setZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isSelectingBox, setIsSelectingBox] = useState(false);
@@ -176,6 +186,39 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     handleType: string;
     startCornerRadius: number;
   } | null>(null);
+  const MIN_ZOOM = 0.2;
+  const MAX_ZOOM = 4;
+  const ZOOM_FACTOR = 1.2;
+  const clampZoom = useCallback((value: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value)), []);
+  const applyZoom = useCallback((next: number) => {
+    let result = 1;
+    setZoom(prev => {
+      const clamped = clampZoom(next);
+      result = clamped;
+      return clamped;
+    });
+    return result;
+  }, [clampZoom]);
+  const zoomBy = useCallback((factor: number) => {
+    let result = 1;
+    setZoom(prev => {
+      const clamped = clampZoom(prev * factor);
+      result = clamped;
+      return clamped;
+    });
+    return result;
+  }, [clampZoom]);
+  const getPointerPosition = useCallback((clientX: number, clientY: number) => {
+    if (!svgRef.current) return { x: 0, y: 0 };
+    const rect = svgRef.current.getBoundingClientRect();
+    if (!rect.width || !rect.height) return { x: 0, y: 0 };
+    const scaleX = width / rect.width;
+    const scaleY = height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  }, [height, width]);
   const selectedShape = useMemo(() => {
     const first = selectedIds.values().next();
     return first.done ? null : first.value;
@@ -489,15 +532,14 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         onShapeSelect?.(shape.element);
         setIsResizing(true);
         setResizeHandle(p.id);
-        const rect = svgRef.current!.getBoundingClientRect();
-        setDragStart({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        setDragStart(getPointerPosition(e.clientX, e.clientY));
       };
       handle.addEventListener('mousedown', onDown);
       svgRef.current!.appendChild(handle);
       created.push(handle);
     });
     resizeHandlesRef.current.set(shape.id, created);
-  }, [createSVGElement, getBounds, hideResizeHandles, onShapeSelect]);
+  }, [createSVGElement, getBounds, getPointerPosition, hideResizeHandles, onShapeSelect]);
 
   const showCornerHandles = useCallback((shape: SVGShape) => {
     if (!svgRef.current || shape.type !== 'roundedRect') return;
@@ -537,8 +579,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         });
         setIsResizing(true);
         // 不要设置 resizeHandle，因为圆角调整有自己独立的逻辑
-        const rect = svgRef.current!.getBoundingClientRect();
-        setDragStart({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        setDragStart(getPointerPosition(e.clientX, e.clientY));
       };
 
       handle.addEventListener('mousedown', onCornerMouseDown);
@@ -547,7 +588,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     });
 
     cornerHandlesRef.current.set(shape.id, created);
-  }, [createSVGElement, getDef, hideCornerHandles]);
+  }, [createSVGElement, getDef, getPointerPosition, hideCornerHandles]);
 
   const refreshResizeHandles = useCallback((shape: SVGShape) => {
     const handles = resizeHandlesRef.current.get(shape.id);
@@ -1193,9 +1234,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
 
-    const rect = svgRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = getPointerPosition(e.clientX, e.clientY);
     lastPointerRef.current = { x, y, clientX: e.clientX, clientY: e.clientY };
 
     if (draggingHandle) {
@@ -1442,7 +1481,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         setHoveredShapeId(null);
       }
     }
-  }, [activePortHighlight, dragStart, draggingHandle, findNearestPortElement, getShapeBounds, getShapeCenter, hidePorts, highlightPortStyle, hoveredShapeId, isConnecting, isDragging, isResizing, isSelectingBox, isLineConnected, resetPortStyle, selectedIds, selectionRect, shapes, resizeHandle, showPorts, tempLine, connectionStart, updateShapePosition, updateShapeSize, refreshResizeHandles, updateConnectionLine]);
+  }, [activePortHighlight, dragStart, draggingHandle, findNearestPortElement, getPointerPosition, getShapeBounds, getShapeCenter, hidePorts, highlightPortStyle, hoveredShapeId, isConnecting, isDragging, isResizing, isSelectingBox, isLineConnected, resetPortStyle, selectedIds, selectionRect, shapes, resizeHandle, showPorts, tempLine, connectionStart, updateShapePosition, updateShapeSize, refreshResizeHandles, updateConnectionLine]);
 
   // 鼠标释放事件处理
   const finalizeHandleConnection = useCallback((targetEl: SVGElement | null, point: { x: number; y: number }) => {
@@ -1637,11 +1676,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   const handleShapeMouseDown = useCallback((e: React.MouseEvent, shape: SVGShape) => {
     e.stopPropagation();
     
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = getPointerPosition(e.clientX, e.clientY);
 
     // 右键点击时保持当前选择，不打断框选/多选
     if (e.button === 2) {
@@ -1896,10 +1931,29 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     const newIds = newShapes.map(s => s.id);
     setSelectedIds(new Set(newIds));
     copyBufferRef.current = newIds;
+    onClipboardChange?.(copyBufferRef.current.length > 0);
     onShapeSelect?.(mergedShapes.find(s => s.id === newIds[0])?.element || null);
     saveToHistory(mergedShapes, newIds);
     return newIds;
-  }, [applyTransform, cloneShapeWithDef, createSVGElement, generateId, getPortPositionById, getShapeCenter, onShapeSelect, saveToHistory, selectedIds, shapes]);
+  }, [applyTransform, cloneShapeWithDef, createSVGElement, generateId, getPortPositionById, getShapeCenter, onClipboardChange, onShapeSelect, saveToHistory, selectedIds, shapes]);
+
+  const copySelection = useCallback(() => {
+    if (selectedIds.size === 0) return 0;
+    copyBufferRef.current = Array.from(selectedIds);
+    onClipboardChange?.(copyBufferRef.current.length > 0);
+    return copyBufferRef.current.length;
+  }, [onClipboardChange, selectedIds]);
+
+  const pasteClipboard = useCallback(() => {
+    if (copyBufferRef.current.length === 0) return 0;
+    const newIds = duplicateSelected(copyBufferRef.current);
+    if (newIds && newIds.length) {
+      copyBufferRef.current = newIds;
+      onClipboardChange?.(copyBufferRef.current.length > 0);
+      return newIds.length;
+    }
+    return 0;
+  }, [duplicateSelected, onClipboardChange]);
 
   const bringToFront = useCallback(() => {
     if (!selectedShape || !svgRef.current) return;
@@ -2262,20 +2316,18 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     return () => {
       cleanups.forEach(clean => clean());
     };
-  }, [draggingCornerHandle, draggingHandle, handleShapeMouseDown, hideConnectorHandles, hidePorts, hideResizeHandles, hideCornerHandles, isConnecting, selectedIds, shapes, showConnectorHandles, showPorts, showResizeHandles, showCornerHandles, showTextSelection, hideTextSelection, beginEditText, updateTextContent]);
+  }, [draggingCornerHandle, draggingHandle, getPointerPosition, handleShapeMouseDown, hideConnectorHandles, hidePorts, hideResizeHandles, hideCornerHandles, isConnecting, selectedIds, shapes, showConnectorHandles, showPorts, showResizeHandles, showCornerHandles, showTextSelection, hideTextSelection, beginEditText, updateTextContent]);
 
   // 画布点击事件（取消选择）
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (e.target === svgRef.current) {
-      const rect = svgRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const { x, y } = getPointerPosition(e.clientX, e.clientY);
       setIsSelectingBox(true);
       setSelectionRect({ x, y, w: 0, h: 0 });
       setSelectedShape(null);
       onShapeSelect?.(null);
     }
-  }, [onShapeSelect]);
+  }, [getPointerPosition, onShapeSelect]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (e.target === svgRef.current) {
@@ -2289,9 +2341,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       if (selectedShape) {
         const current = shapes.find(s => s.id === selectedShape);
         if (current && (current.type === 'line' || current.type === 'connector') && svgRef.current) {
-          const rect = svgRef.current.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
+          const { x, y } = getPointerPosition(e.clientX, e.clientY);
           const dist = pointToSegmentDistance(x, y, current.data.x1 || 0, current.data.y1 || 0, current.data.x2 || 0, current.data.y2 || 0);
           const tolerance = 8; // 像素容差
           if (dist <= tolerance) {
@@ -2316,7 +2366,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       setConnectionStart(null);
       setConnectionStartPort(null);
     }
-  }, [onShapeSelect, isConnecting, tempLine, pointToSegmentDistance, selectedShape, shapes]);
+  }, [getPointerPosition, onShapeSelect, isConnecting, tempLine, pointToSegmentDistance, selectedShape, shapes]);
 
   // 全局键盘快捷键
   useEffect(() => {
@@ -2337,6 +2387,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       } else if (meta && e.key.toLowerCase() === 'c') {
         e.preventDefault();
         copyBufferRef.current = Array.from(selectedIds);
+        onClipboardChange?.(copyBufferRef.current.length > 0);
       } else if (meta && e.key.toLowerCase() === 'd') {
         e.preventDefault();
         duplicateSelected();
@@ -2346,6 +2397,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           const newIds = duplicateSelected(copyBufferRef.current);
           if (newIds && newIds.length) {
             copyBufferRef.current = newIds;
+            onClipboardChange?.(copyBufferRef.current.length > 0);
           }
         }
       } else if (meta && e.key.toLowerCase() === 'z') {
@@ -2418,6 +2470,13 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     canUndo,
     canRedo,
     addShapeAt,
+    setZoom: applyZoom,
+    zoomIn: (factor = ZOOM_FACTOR) => zoomBy(factor),
+    zoomOut: (factor = ZOOM_FACTOR) => zoomBy(1 / factor),
+    getZoom: () => zoom,
+    copySelection,
+    pasteClipboard,
+    hasClipboard: () => copyBufferRef.current.length > 0,
   };
 
   // 始终暴露最新方法（避免旧引用缺少新增方法）
@@ -2444,12 +2503,16 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
   }, [onReady]);
 
   return (
-    <div className="relative border border-gray-300 rounded">
+    <div
+      className="relative border border-gray-300 rounded"
+      style={{ width: width * zoom, height: height * zoom }}
+    >
       <svg
         ref={svgRef}
         width={width}
         height={height}
-        style={{ backgroundColor }}
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ backgroundColor, width: width * zoom, height: height * zoom }}
         className="block"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
@@ -2496,10 +2559,10 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         <div
           className="absolute border-2 border-blue-400 border-dashed bg-blue-200/20 pointer-events-none"
           style={{
-            left: selectionRect.x,
-            top: selectionRect.y,
-            width: selectionRect.w,
-            height: selectionRect.h,
+            left: selectionRect.x * zoom,
+            top: selectionRect.y * zoom,
+            width: selectionRect.w * zoom,
+            height: selectionRect.h * zoom,
           }}
         />
       )}
@@ -2507,10 +2570,10 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
         <div
           className="absolute pointer-events-none"
           style={{
-            left: groupSelectionBounds.x,
-            top: groupSelectionBounds.y,
-            width: groupSelectionBounds.w,
-            height: groupSelectionBounds.h,
+            left: groupSelectionBounds.x * zoom,
+            top: groupSelectionBounds.y * zoom,
+            width: groupSelectionBounds.w * zoom,
+            height: groupSelectionBounds.h * zoom,
           }}
         >
           <div className="absolute inset-0 border-2 border-dashed border-[#36a7ff]" />
@@ -2549,8 +2612,8 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
           key={`${handle.shapeId}-${handle.index}`}
           className="absolute w-3 h-3 bg-[#36a7ff] rounded-full border-2 border-white cursor-move"
           style={{
-            left: handle.x - 6,
-            top: handle.y - 6,
+            left: handle.x * zoom - 6,
+            top: handle.y * zoom - 6,
           }}
           onMouseDown={(e) => {
             e.stopPropagation();

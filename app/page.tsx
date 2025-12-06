@@ -47,6 +47,14 @@ export default function Home() {
   const [selectedShape, setSelectedShape] = useState<SVGElement | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const MIN_ZOOM = 0.2;
+  const MAX_ZOOM = 4;
+  const zoomOptions = [50, 75, 90, 100, 110, 125, 150, 200, 300];
+  const [zoomDropdownOpen, setZoomDropdownOpen] = useState(false);
+  const [zoomInput, setZoomInput] = useState('100');
+  const zoomDropdownRef = useRef<HTMLDivElement | null>(null);
+  const [canPaste, setCanPaste] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean }>({ x: 0, y: 0, open: false });
   const canvasRef = useRef<CanvasComponentRef | null>(null);
   const canvasMethodsRef = useRef<CanvasComponentRef | null>(null);
@@ -63,13 +71,30 @@ export default function Home() {
     canvasMethodsRef.current = methods;
     canvasRef.current = methods;
     refreshHistoryState();
-  }, [refreshHistoryState]);
+    setZoom(methods.getZoom ? methods.getZoom() : 1);
+    setCanPaste(methods.hasClipboard ? methods.hasClipboard() : false);
+  }, [refreshHistoryState, setZoom]);
 
   useEffect(() => {
     if (canvasRef.current) {
       canvasMethodsRef.current = canvasRef.current;
     }
   });
+
+  useEffect(() => {
+    const clickOutside = (e: MouseEvent) => {
+      if (!zoomDropdownRef.current) return;
+      if (!zoomDropdownRef.current.contains(e.target as Node)) {
+        setZoomDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', clickOutside);
+    return () => document.removeEventListener('mousedown', clickOutside);
+  }, []);
+
+  useEffect(() => {
+    setZoomInput(String(Math.round(zoom * 100)));
+  }, [zoom]);
 
   const handleCanvasError = useCallback((error: Error) => {
     console.error('Canvas initialization failed:', error);
@@ -245,6 +270,89 @@ export default function Home() {
     }
   }, [refreshHistoryState]);
 
+  const clientToCanvasPoint = useCallback((clientX: number, clientY: number) => {
+    const svg = canvasMethodsRef.current?.getCanvas?.();
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    return {
+      x: ((clientX - rect.left) * canvasWidth) / rect.width,
+      y: ((clientY - rect.top) * canvasHeight) / rect.height,
+    };
+  }, [canvasHeight, canvasWidth]);
+
+  const handleCopy = useCallback(() => {
+    if (!canvasMethodsRef.current?.copySelection) return;
+    const count = canvasMethodsRef.current.copySelection();
+    const nextCanPaste = canvasMethodsRef.current.hasClipboard?.() ?? count > 0;
+    setCanPaste(nextCanPaste);
+  }, []);
+
+  const handlePaste = useCallback(() => {
+    if (!canvasMethodsRef.current?.pasteClipboard) return;
+    const count = canvasMethodsRef.current.pasteClipboard();
+    const nextCanPaste = (canvasMethodsRef.current.hasClipboard?.() ?? (count > 0)) || canPaste;
+    setCanPaste(nextCanPaste);
+    refreshHistoryState();
+  }, [canPaste, refreshHistoryState]);
+
+  const handleClipboardChange = useCallback((hasClipboard: boolean) => {
+    setCanPaste(hasClipboard);
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    if (canvasMethodsRef.current?.zoomIn) {
+      const nextZoom = canvasMethodsRef.current.zoomIn();
+      setZoom(nextZoom);
+    }
+    setZoomDropdownOpen(false);
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (canvasMethodsRef.current?.zoomOut) {
+      const nextZoom = canvasMethodsRef.current.zoomOut();
+      setZoom(nextZoom);
+    }
+    setZoomDropdownOpen(false);
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    if (canvasMethodsRef.current?.setZoom) {
+      const nextZoom = canvasMethodsRef.current.setZoom(1);
+      setZoom(nextZoom);
+    } else {
+      setZoom(1);
+    }
+    setZoomDropdownOpen(false);
+  }, []);
+
+  const handleSelectZoomPercent = useCallback((percent: number) => {
+    const target = percent / 100;
+    if (canvasMethodsRef.current?.setZoom) {
+      const nextZoom = canvasMethodsRef.current.setZoom(target);
+      setZoom(nextZoom);
+    } else {
+      setZoom(target);
+    }
+    setZoomDropdownOpen(false);
+  }, []);
+
+  const handleApplyCustomZoom = useCallback(() => {
+    const parsed = parseFloat(zoomInput);
+    if (Number.isNaN(parsed)) return;
+    const clampedPercent = Math.min(MAX_ZOOM * 100, Math.max(MIN_ZOOM * 100, parsed));
+    const target = clampedPercent / 100;
+    if (canvasMethodsRef.current?.setZoom) {
+      const nextZoom = canvasMethodsRef.current.setZoom(target);
+      setZoom(nextZoom);
+      setZoomInput(String(Math.round(nextZoom * 100)));
+    } else {
+      setZoom(target);
+      setZoomInput(String(Math.round(target * 100)));
+    }
+    setZoomDropdownOpen(false);
+  }, [MAX_ZOOM, MIN_ZOOM, zoomInput]);
+
   const closeContextMenu = useCallback(() => {
     setContextMenu(prev => ({ ...prev, open: false }));
   }, []);
@@ -252,11 +360,9 @@ export default function Home() {
   const handleCanvasDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!canvasMethodsRef.current) return;
-    const svg = canvasMethodsRef.current.getCanvas?.();
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const point = clientToCanvasPoint(e.clientX, e.clientY);
+    if (!point) return;
+    const { x, y } = point;
     const shapeType = e.dataTransfer.getData('application/x-draw-shape');
     const iconUrl = e.dataTransfer.getData('application/x-draw-icon');
     const iconName = e.dataTransfer.getData('application/x-draw-icon-name');
@@ -277,7 +383,7 @@ export default function Home() {
     } else if (iconUrl) {
       canvasMethodsRef.current.addSvgIcon(iconUrl, { width: 80, height: 60, position: { x, y }, iconName: iconName || undefined });
     }
-  }, []);
+  }, [clientToCanvasPoint]);
 
   const handleCanvasDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -288,7 +394,10 @@ export default function Home() {
     setContextMenu({ x: e.clientX, y: e.clientY, open: true });
   }, []);
 
-  const menuData = [
+  const hasSelection = !!selectedShape;
+  const clipboardReady = canvasMethodsRef.current?.hasClipboard?.() ?? canPaste;
+
+  const menuData = React.useMemo(() => [
     {
       key: '文件',
       items: [
@@ -324,16 +433,16 @@ export default function Home() {
     {
       key: '编辑',
       items: [
-        { label: '撤销', shortcut: '⌘+Z' },
-        { label: '重做', shortcut: '⌘+⇧+Z', disabled: true },
+        { label: '撤销', shortcut: '⌘+Z', action: handleUndo, disabled: !canUndo },
+        { label: '重做', shortcut: '⌘+⇧+Z', action: handleRedo, disabled: !canRedo },
         'divider',
         { label: '剪切', shortcut: '⌘+X', disabled: true },
-        { label: '复制', shortcut: '⌘+C', disabled: true },
+        { label: '复制', shortcut: '⌘+C', action: handleCopy, disabled: !hasSelection },
         { label: '复制为图像', shortcut: '⌘+⌥+X' },
         { label: '复制为 SVG', shortcut: '⌘+⌥+⇧+X' },
-        { label: '粘贴', shortcut: '⌘+V' },
-        { label: '删除', disabled: true },
-        { label: '创建副本', shortcut: '⌘+D', disabled: true },
+        { label: '粘贴', shortcut: '⌘+V', action: handlePaste, disabled: !clipboardReady },
+        { label: '删除', action: handleDelete, disabled: !hasSelection },
+        { label: '创建副本', shortcut: '⌘+D', action: handleDuplicate, disabled: !hasSelection },
         'divider',
         { label: '查找/替换', shortcut: '⌘+F' },
         { label: '编辑数据...', shortcut: '⌘+M' },
@@ -431,7 +540,7 @@ export default function Home() {
         { label: 'v29.2.3', disabled: true },
       ],
     },
-  ];
+  ], [clipboardReady, canRedo, canUndo, handleCopy, handleDelete, handleDuplicate, handlePaste, handleRedo, handleUndo, hasSelection]);
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
@@ -464,6 +573,12 @@ export default function Home() {
               disabled ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'
             }`}
             onMouseEnter={() => hasChildren && setOpenSub(item.label)}
+            onClick={() => {
+              if (disabled || hasChildren) return;
+              item.action?.();
+              setOpenMenu(null);
+              setOpenSub(null);
+            }}
             style={{ fontFamily: 'Arial', fontSize: 14 }}
           >
             <div className="flex justify-center">
@@ -538,15 +653,73 @@ export default function Home() {
 
         <div className="w-px h-6 bg-gray-200 mx-1" />
 
-        <div className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer text-gray-700 text-sm">
-          <span className="font-medium">{'100%'}</span>
-          <ChevronDown size={14} />
+        <div className="relative" ref={zoomDropdownRef}>
+          <div
+            className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer text-gray-700 text-sm"
+            onClick={() => setZoomDropdownOpen(prev => !prev)}
+            title="点击选择或重置缩放"
+          >
+            <span className="font-medium">{`${Math.round(zoom * 100)}%`}</span>
+            <ChevronDown size={14} />
+          </div>
+          {zoomDropdownOpen && (
+            <div className="absolute z-50 mt-1 w-36 bg-white border border-gray-200 rounded shadow-md">
+              <div className="max-h-56 overflow-auto py-1">
+                {zoomOptions.map(percent => {
+                  const active = Math.round(zoom * 100) === percent;
+                  return (
+                    <button
+                      key={percent}
+                      className={`w-full text-left px-3 py-2 text-sm ${
+                        active ? 'bg-gray-100 text-gray-900 font-medium' : 'hover:bg-gray-50 text-gray-700'
+                      }`}
+                      onClick={() => handleSelectZoomPercent(percent)}
+                    >
+                      {percent}%
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="border-t border-gray-100 px-3 py-2">
+                <div className="text-xs text-gray-500 mb-1">自定义</div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={zoomInput}
+                    onChange={(e) => setZoomInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleApplyCustomZoom(); }}
+                    className="h-8 text-sm"
+                    min={MIN_ZOOM * 100}
+                    max={MAX_ZOOM * 100}
+                  />
+                  <span className="text-sm text-gray-500">%</span>
+                  <Button size="sm" onClick={handleApplyCustomZoom}>确定</Button>
+                </div>
+                <button
+                  className="mt-2 w-full text-left text-xs text-blue-600 hover:text-blue-700"
+                  onClick={handleResetZoom}
+                >
+                  重置为 100%
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="放大">
+        <button
+          className={`h-9 w-9 flex items-center justify-center rounded ${zoom >= MAX_ZOOM ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-600'}`}
+          title="放大"
+          onClick={handleZoomIn}
+          disabled={zoom >= MAX_ZOOM}
+        >
           <ZoomIn size={18} />
         </button>
-        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="缩小">
+        <button
+          className={`h-9 w-9 flex items-center justify-center rounded ${zoom <= MIN_ZOOM ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-600'}`}
+          title="缩小"
+          onClick={handleZoomOut}
+          disabled={zoom <= MIN_ZOOM}
+        >
           <ZoomOut size={18} />
         </button>
 
@@ -605,7 +778,12 @@ export default function Home() {
 
         <div className="w-px h-6 bg-gray-200 mx-1" />
 
-        <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="删除">
+        <button
+          className={`h-9 w-9 flex items-center justify-center rounded ${hasSelection ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
+          title="删除"
+          onClick={handleDelete}
+          disabled={!hasSelection}
+        >
           <Trash2 size={18} />
         </button>
         <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="框选">
@@ -614,7 +792,20 @@ export default function Home() {
         <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="粘贴样式">
           <Clipboard size={18} />
         </button>
-        <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="粘贴">
+        <button
+          className={`h-9 w-9 flex items-center justify-center rounded ${hasSelection ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
+          title="复制"
+          onClick={handleCopy}
+          disabled={!hasSelection}
+        >
+          <Copy size={18} />
+        </button>
+        <button
+          className={`h-9 w-9 flex items-center justify-center rounded ${clipboardReady ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
+          title="粘贴"
+          onClick={handlePaste}
+          disabled={!clipboardReady}
+        >
           <ClipboardPaste size={18} />
         </button>
         <button className="h-9 w-9 flex items-center justify-center rounded text-gray-400 cursor-not-allowed" title="编辑">
@@ -637,9 +828,6 @@ export default function Home() {
 
         <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="添加">
           <Plus size={18} />
-        </button>
-        <button className="h-9 w-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="复制">
-          <Copy size={18} />
         </button>
 
         <div className="w-px h-6 bg-gray-200 mx-1" />
@@ -822,6 +1010,7 @@ export default function Home() {
               onError={handleCanvasError}
               onShapeSelect={handleShapeSelect}
               onCanvasChange={handleCanvasChange}
+              onClipboardChange={handleClipboardChange}
               autoResize={false}
             />
           </div>
