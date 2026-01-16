@@ -506,6 +506,7 @@ export default function Home() {
   const handleOpenFile = useCallback((file?: File) => {
     const targetFile = file ?? fileInputRef.current?.files?.[0];
     if (!targetFile) return;
+    canvasMethodsRef.current?.clearCanvas?.();
     const reader = new FileReader();
     reader.onload = () => {
       const text = reader.result?.toString() ?? '';
