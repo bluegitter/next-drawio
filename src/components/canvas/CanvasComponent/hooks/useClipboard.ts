@@ -60,8 +60,8 @@ export const useClipboard = ({
       }
       return cloned;
     }
-    return def.clone(shape, offset) as SVGShape;
-  }, [getDef]);
+    return def.clone(shape, { createSVGElement, generateId }, offset) as SVGShape;
+  }, [createSVGElement, generateId, getDef]);
 
   const cloneShapeForClipboard = useCallback((shape: SVGShape) => {
     return {

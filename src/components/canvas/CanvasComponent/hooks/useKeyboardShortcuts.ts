@@ -100,7 +100,8 @@ export const useKeyboardShortcuts = ({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const options = { capture: true };
+    window.addEventListener('keydown', handleKeyDown, options);
+    return () => window.removeEventListener('keydown', handleKeyDown, options);
   }, [clearSelection, combineSelected, copySelection, deleteSelected, duplicateSelected, isConnecting, pasteClipboard, redo, selectAllShapes, tempLine, undo, ungroupSelected, svgRef, setConnectionStart, setConnectionStartPort, setIsConnecting, setTempLine]);
 };
