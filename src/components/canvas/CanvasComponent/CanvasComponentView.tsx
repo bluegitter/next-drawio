@@ -84,8 +84,6 @@ const CanvasComponentView = ({
         }}
         className="block"
         onMouseDown={handleCanvasMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
         onClick={handleCanvasClick}
       >
         <defs>
