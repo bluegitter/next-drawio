@@ -140,7 +140,7 @@ export const usePointerUp = ({
     });
   }, [activePortHighlight, draggingHandle, findNearestPortElement, getConnectorPoints, getPortPositionById, getShapeCenter, handleConnectionRef, hidePorts, hoveredShapeId, onShapeSelect, resetPortStyle, saveToHistory, selectedIds, setActivePortHighlight, setDraggingHandle, setHoveredShapeId, setIsConnecting, setSelectedShape, setShapesState, shapes, showConnectorHandles, updateConnectorPoints]);
 
-  const handleMouseUp = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+  const handleMouseUp = useCallback((e: React.MouseEvent<SVGSVGElement> | React.PointerEvent<HTMLElement>) => {
     if (draggingHandle) {
       finalizeHandleConnectionCallback(e.target as SVGElement, { x: lastPointerRef.current.x, y: lastPointerRef.current.y });
       return;

@@ -105,10 +105,15 @@ interface UseCanvasInteractionsArgs {
     parsePoints: (points: string) => Array<[number, number]>;
     pointToPolylineDistance: (x: number, y: number, points: Array<[number, number]>) => number;
   };
+  connectorNodeSnap: {
+    enabled: boolean;
+    snapDistance: number;
+    alignDistance: number;
+  };
   onShapeSelect?: (shape: SVGElement | null) => void;
 }
 
-export const useCanvasInteractions = ({ state, controller, helpers, onShapeSelect }: UseCanvasInteractionsArgs) => {
+export const useCanvasInteractions = ({ state, controller, helpers, connectorNodeSnap, onShapeSelect }: UseCanvasInteractionsArgs) => {
   const handleMouseMove = usePointerMove({
     svgRef: state.svgRef,
     shapes: state.shapes,
@@ -155,6 +160,9 @@ export const useCanvasInteractions = ({ state, controller, helpers, onShapeSelec
     hidePorts: controller.connections.hidePorts,
     showCornerHandles: controller.selectionUi.showCornerHandles,
     lastPointerRef: state.lastPointerRef,
+    enableConnectorNodeSnap: connectorNodeSnap.enabled,
+    connectorNodeSnapDistance: connectorNodeSnap.snapDistance,
+    connectorNodeAlignDistance: connectorNodeSnap.alignDistance,
   });
 
   const { handleMouseUp } = usePointerUp({

@@ -47,9 +47,12 @@ export const useCanvasDerived = ({
     const handles: Array<{ shapeId: string; index: number; x: number; y: number }> = [];
     selectedIds.forEach(id => {
       const shape = shapes.find(s => s.id === id);
-      if (!shape || !shape.data.points) return;
-      if (shape.type !== 'polyline' && shape.type !== 'connector') return;
-      const pts = parsePoints(shape.data.points);
+      if (!shape) return;
+      if (shape.type !== 'polyline' && shape.type !== 'connector') {
+        return;
+      }
+      const rawPoints = shape.data.points || (shape.element instanceof SVGPolylineElement ? shape.element.getAttribute('points') || '' : '');
+      const pts = parsePoints(rawPoints);
       if (pts.length === 0) return;
       const startIndex = shape.type === 'connector' ? 1 : 0;
       const endIndex = shape.type === 'connector' ? pts.length - 1 : pts.length;

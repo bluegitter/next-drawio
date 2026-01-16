@@ -8,8 +8,8 @@ interface CanvasComponentViewProps {
   viewBoxMinX: number;
   viewBoxMinY: number;
   handleCanvasMouseDown: (e: React.MouseEvent<SVGSVGElement>) => void;
-  handleMouseMove: (e: React.MouseEvent<SVGSVGElement>) => void;
-  handleMouseUp: (e: React.MouseEvent<SVGSVGElement>) => void;
+  handleMouseMove: (e: React.MouseEvent<SVGSVGElement> | React.PointerEvent<HTMLElement>) => void;
+  handleMouseUp: (e: React.MouseEvent<SVGSVGElement> | React.PointerEvent<HTMLElement>) => void;
   handleCanvasClick: (e: React.MouseEvent<SVGSVGElement>) => void;
   pageWidth?: number;
   pageHeight?: number;
@@ -61,6 +61,8 @@ const CanvasComponentView = ({
     <div
       className="relative border border-gray-300 rounded"
       style={{ width: width * zoom, height: height * zoom }}
+      onPointerMove={handleMouseMove}
+      onPointerUp={handleMouseUp}
     >
       <svg
         ref={svgRef}
@@ -202,17 +204,29 @@ const CanvasComponentView = ({
       {polylineHandles.map(handle => (
         <div
           key={`${handle.shapeId}-${handle.index}`}
-          className="absolute w-3 h-3 bg-[#36a7ff] rounded-full border-2 border-white cursor-move"
+          className="absolute w-3 h-3 bg-[#36a7ff] rounded-full border-2 border-white cursor-move z-20"
           style={{
             left: handle.x * zoom - 6,
             top: handle.y * zoom - 6,
           }}
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             const rect = svgRef.current?.getBoundingClientRect();
             if (!rect) return;
+            e.currentTarget.setPointerCapture(e.pointerId);
             setDraggingPolylinePoint({ shapeId: handle.shapeId, index: handle.index });
             setDragStart({ x: handle.x, y: handle.y });
+          }}
+          onPointerUp={(e) => {
+            if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+              e.currentTarget.releasePointerCapture(e.pointerId);
+            }
+          }}
+          onPointerCancel={(e) => {
+            if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+              e.currentTarget.releasePointerCapture(e.pointerId);
+            }
           }}
         />
       ))}

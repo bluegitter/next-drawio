@@ -20,6 +20,9 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     pageCountX,
     pageHeight,
     pageCountY,
+    enableConnectorNodeSnap = true,
+    connectorNodeSnapDistance = 14,
+    connectorNodeAlignDistance = 6,
   } = props;
   const state = useCanvasState(props);
   const {
@@ -76,6 +79,11 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
       getConnectorPoints,
       parsePoints,
       pointToPolylineDistance,
+    },
+    connectorNodeSnap: {
+      enabled: enableConnectorNodeSnap,
+      snapDistance: connectorNodeSnapDistance,
+      alignDistance: connectorNodeAlignDistance,
     },
     onShapeSelect,
   });

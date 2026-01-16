@@ -3,6 +3,7 @@ import type React from 'react';
 import type { SVGShape } from '../types';
 import { handleConnectorHandleDragMove } from './pointerMoveHandleDrag';
 import { handleResizeMove } from './pointerMoveResize';
+import { handlePolylinePointDragMove } from './pointerMovePolylinePoint';
 
 interface UsePointerMoveArgs {
   svgRef: React.RefObject<SVGSVGElement>;
@@ -50,6 +51,9 @@ interface UsePointerMoveArgs {
   hidePorts: (shapeId: string) => void;
   showCornerHandles: (shape: SVGShape) => void;
   lastPointerRef: React.MutableRefObject<{ x: number; y: number; clientX: number; clientY: number }>;
+  enableConnectorNodeSnap?: boolean;
+  connectorNodeSnapDistance?: number;
+  connectorNodeAlignDistance?: number;
 }
 
 export const usePointerMove = ({
@@ -98,8 +102,11 @@ export const usePointerMove = ({
   hidePorts,
   showCornerHandles,
   lastPointerRef,
+  enableConnectorNodeSnap = true,
+  connectorNodeSnapDistance = 14,
+  connectorNodeAlignDistance = 6,
 }: UsePointerMoveArgs) => {
-  return useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+  return useCallback((e: React.MouseEvent<SVGSVGElement> | React.PointerEvent<HTMLElement>) => {
     if (!svgRef.current) return;
 
     const { x, y } = getPointerPosition(e.clientX, e.clientY);
@@ -131,21 +138,22 @@ export const usePointerMove = ({
       const { shapeId, index } = draggingPolylinePoint;
       const shape = shapes.find(s => s.id === shapeId);
       if (shape && (shape.type === 'polyline' || shape.type === 'connector')) {
-        const pts = parsePoints(shape.data.points);
-        if (pts[index]) {
-          const dx = x - dragStart.x;
-          const dy = y - dragStart.y;
-          pts[index] = [pts[index][0] + dx, pts[index][1] + dy];
-          const nextShape = { ...shape, data: { ...shape.data } };
-          if (shape.type === 'connector') {
-            updateConnectorPoints(nextShape, pts);
-          } else {
-            updatePolylinePoints(nextShape, pts);
-          }
-          const updatedShapes = shapes.map(s => s.id === shape.id ? nextShape : s);
-          setShapesState(() => updatedShapes);
-          setDragStart({ x, y });
-        }
+        handlePolylinePointDragMove({
+          shapes,
+          shape,
+          index,
+          x,
+          y,
+          dragStart,
+          setDragStart,
+          setShapesState,
+          parsePoints,
+          updateConnectorPoints,
+          updatePolylinePoints,
+          enableConnectorNodeSnap,
+          connectorNodeSnapDistance,
+          connectorNodeAlignDistance,
+        });
       }
     } else if (isConnecting && tempLine && connectionStart) {
       const fromShapeObj = shapes.find(s => s.id === connectionStart);
@@ -161,7 +169,18 @@ export const usePointerMove = ({
         selectedIds.forEach(id => {
           const shape = shapes.find(s => s.id === id);
           if (shape) {
-            if ((shape.type === 'line' || shape.type === 'connector') && isLineConnected(shape)) {
+            if (shape.type === 'connector' && isLineConnected(shape)) {
+              const points = getConnectorPoints(shape);
+              if (points.length > 2) {
+                const moved = points.map((pt, idx) => {
+                  if (idx === 0 || idx === points.length - 1) return pt;
+                  return [pt[0] + dx, pt[1] + dy] as [number, number];
+                });
+                updateConnectorPoints(shape, moved);
+              }
+              return;
+            }
+            if (shape.type === 'line' && isLineConnected(shape)) {
               return;
             }
             updateShapePosition(shape, dx, dy);
@@ -183,6 +202,21 @@ export const usePointerMove = ({
               }
             });
           }
+        });
+
+        nextShapes.forEach(shape => {
+          if (shape.type !== 'connector') return;
+          if (selectedIds.has(shape.id)) return;
+          const [fromId, toId] = (shape.connections || []) as Array<string | null | undefined>;
+          if (!fromId || !toId) return;
+          if (!selectedIds.has(fromId) || !selectedIds.has(toId)) return;
+          const points = getConnectorPoints(shape);
+          if (points.length <= 2) return;
+          const movedPoints = points.map((pt, idx) => {
+            if (idx === 0 || idx === points.length - 1) return pt;
+            return [pt[0] + dx, pt[1] + dy] as [number, number];
+          });
+          updateConnectorPoints(shape, movedPoints);
         });
 
         setShapesState(() => nextShapes);
@@ -271,5 +305,5 @@ export const usePointerMove = ({
         setHoveredShapeId(null);
       }
     }
-  }, [activePortHighlight, connectionStart, dragStart, draggingCornerHandle, draggingHandle, draggingPolylinePoint, findNearestPortElement, getConnectorPoints, getPointerPosition, getShapeBounds, hidePorts, highlightPortStyle, hoveredShapeId, isConnecting, isDragging, isLineConnected, isResizing, isSelectingBox, parsePoints, refreshResizeHandles, resetPortStyle, resizeHandle, selectedIds, selectedShape, selectionOriginRef, setActivePortHighlight, setDragStart, setHoveredShapeId, setSelectionRect, setShapesState, setDraggingCornerHandle, shapes, showCornerHandles, showPorts, tempLine, updateConnectionLine, updateConnectorPoints, updatePolylinePoints, updateShapePosition, updateShapeSize, svgRef, portElementsRef, connectorHandleRef, lastPointerRef]);
+  }, [activePortHighlight, connectionStart, connectorNodeAlignDistance, connectorNodeSnapDistance, dragStart, draggingCornerHandle, draggingHandle, draggingPolylinePoint, enableConnectorNodeSnap, findNearestPortElement, getConnectorPoints, getPointerPosition, getShapeBounds, hidePorts, highlightPortStyle, hoveredShapeId, isConnecting, isDragging, isLineConnected, isResizing, isSelectingBox, parsePoints, refreshResizeHandles, resetPortStyle, resizeHandle, selectedIds, selectedShape, selectionOriginRef, setActivePortHighlight, setDragStart, setHoveredShapeId, setSelectionRect, setShapesState, setDraggingCornerHandle, shapes, showCornerHandles, showPorts, tempLine, updateConnectionLine, updateConnectorPoints, updatePolylinePoints, updateShapePosition, updateShapeSize, svgRef, portElementsRef, connectorHandleRef, lastPointerRef]);
 };

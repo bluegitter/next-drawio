@@ -67,6 +67,9 @@ export interface CanvasComponentProps {
   pageCountY?: number;
   pageOffsetXPages?: number;
   pageOffsetYPages?: number;
+  enableConnectorNodeSnap?: boolean;
+  connectorNodeSnapDistance?: number;
+  connectorNodeAlignDistance?: number;
 }
 
 export interface SVGShape {
