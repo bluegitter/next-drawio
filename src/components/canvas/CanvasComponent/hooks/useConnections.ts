@@ -47,14 +47,14 @@ export const useConnections = ({
 
   const findNearestPortElement = useCallback(
     (x: number, y: number, maxDistance = 14) => {
-      let nearest: { el: SVGElement; dist: number } | null = null;
+      let nearest: { el: SVGCircleElement; dist: number } | null = null;
       for (const portList of portElementsRef.current.values()) {
         for (const port of portList) {
           const cx = Number(port.getAttribute('cx'));
           const cy = Number(port.getAttribute('cy'));
           const dist = Math.hypot(cx - x, cy - y);
           if (dist <= maxDistance && (!nearest || dist < nearest.dist)) {
-            nearest = { el: port, dist };
+            nearest = { el: port as SVGCircleElement, dist };
           }
         }
       }

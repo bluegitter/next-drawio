@@ -12,8 +12,8 @@ export interface CanvasComponentRef {
   zoomIn: (factor?: number) => number;
   zoomOut: (factor?: number) => number;
   getZoom: () => number;
-  copySelection: () => number;
-  pasteClipboard: () => number;
+  copySelection: () => void;
+  pasteClipboard: () => void;
   hasClipboard: () => boolean;
   combineSelected: () => void;
   ungroupSelected: () => void;
@@ -23,7 +23,7 @@ export interface CanvasComponentRef {
   clearCanvas: () => void;
   exportCanvas: (format: 'png' | 'jpg' | 'svg') => void;
   getCanvas: () => SVGSVGElement | null;
-  getSelectedShape: () => SVGElement | null;
+  getSelectedShape: (selectedShapeId?: string | null | undefined) => SVGElement | null;
   getSelectionCount: () => number;
   exportJson: () => string;
   importJson: (payload: string) => void;

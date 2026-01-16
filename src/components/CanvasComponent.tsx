@@ -10,6 +10,7 @@ import { useCanvasInteractions } from './canvas/CanvasComponent/hooks/useCanvasI
 import { useCanvasLifecycle } from './canvas/CanvasComponent/hooks/useCanvasLifecycle';
 import CanvasComponentView from './canvas/CanvasComponent/CanvasComponentView';
 
+export type { CanvasComponentRef };
 export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentProps>((props, ref) => {
   const {
     width,
@@ -72,6 +73,7 @@ export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentPro
     state: {
       ...state,
       setShapesState: controller.setShapesState,
+      tempLine: state.tempLine,
     },
     controller,
     helpers: {

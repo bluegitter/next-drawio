@@ -12,6 +12,7 @@ interface UseCanvasLifecycleArgs {
   state: {
     svgRef: React.RefObject<SVGSVGElement>;
     shapes: SVGShape[];
+    selectedShape: string | null;
     editingText: { id: string } | null;
     setEditingText: React.Dispatch<React.SetStateAction<any>>;
     isConnecting: boolean;
@@ -28,8 +29,8 @@ interface UseCanvasLifecycleArgs {
     historyActions: {
       undo: () => void;
       redo: () => void;
-      canUndo: boolean;
-      canRedo: boolean;
+      canUndo: () => boolean;
+      canRedo: () => boolean;
     };
     geometry: {
       getShapeBounds: (shape: SVGShape) => { minX: number; minY: number; maxX: number; maxY: number };
@@ -47,7 +48,7 @@ interface UseCanvasLifecycleArgs {
       addShapeAt: (type: string, position: { x: number; y: number }) => void;
     };
     importExport: {
-      exportCanvas: (format: 'png' | 'svg' | 'json', transparent?: boolean) => void;
+      exportCanvas: (format: 'png' | 'jpg' | 'svg') => void;
       exportJson: () => string;
       importJson: (json: string) => void;
     };
@@ -70,7 +71,7 @@ interface UseCanvasLifecycleArgs {
       ungroupSelected: () => void;
       deleteSelected: () => void;
       clearCanvas: () => void;
-      getSelectedShape: () => string | null;
+      getSelectedShape: (selectedShapeId: string | null) => SVGElement | null;
       getSelectionCount: () => number;
     };
     styleActions: {
@@ -167,7 +168,7 @@ export const useCanvasLifecycle = ({ ref, props, state, controller, zoom }: UseC
     clearCanvas: controller.selectionActions.clearCanvas,
     exportCanvas: controller.importExport.exportCanvas,
     getCanvas: () => state.svgRef.current,
-    getSelectedShape: controller.selectionActions.getSelectedShape,
+    getSelectedShape: () => controller.selectionActions.getSelectedShape(state.selectedShape),
     getSelectionCount: controller.selectionActions.getSelectionCount,
     duplicateSelected: controller.clipboard.duplicateSelected,
     bringToFront: controller.layering.bringToFront,

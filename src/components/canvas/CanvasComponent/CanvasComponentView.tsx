@@ -133,7 +133,7 @@ const CanvasComponentView = ({
             color: editingText.color,
           }}
           value={editingText.value}
-          onChange={e => setEditingText(prev => (prev ? { ...prev, value: e.target.value } : prev))}
+          onChange={e => setEditingText((prev: any) => (prev ? { ...prev, value: e.target.value } : prev))}
           onBlur={() => commitEditingText(true)}
           onKeyDown={e => {
             if (e.key === 'Enter') {

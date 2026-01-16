@@ -66,7 +66,7 @@ export const useCanvasMouse = ({
         const current = shapes.find(s => s.id === selectedShape);
         if (current && (current.type === 'line' || current.type === 'connector') && svgRef.current) {
           const { x, y } = getPointerPosition(e.clientX, e.clientY);
-          const points = current.type === 'connector'
+          const points: [number, number][] = current.type === 'connector'
             ? getConnectorPoints(current)
             : [[current.data.x1 || 0, current.data.y1 || 0], [current.data.x2 || 0, current.data.y2 || 0]];
           const dist = pointToPolylineDistance(x, y, points);

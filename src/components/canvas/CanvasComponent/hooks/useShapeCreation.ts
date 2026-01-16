@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type React from 'react';
-import type { ShapeDefinition } from '../../../shapes/types';
+import type { ShapeDefinition } from '../../../../shapes/types';
 import type { SVGShape } from '../types';
 import { decodeDataUri, toDataUri } from '../utils/svgDataUri';
 import { formatPoints } from '../utils/points';

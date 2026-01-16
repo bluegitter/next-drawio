@@ -45,7 +45,7 @@ interface UseCanvasControllerArgs {
     cornerHandlesRef: React.MutableRefObject<Map<string, SVGRectElement[]>>;
     textSelectionRef: React.MutableRefObject<Map<string, SVGRectElement>>;
     handleConnectionRef: React.MutableRefObject<boolean>;
-    copyBufferRef: React.MutableRefObject<SVGShape[]>;
+    copyBufferRef: React.MutableRefObject<{ ids: string[]; shapes: SVGShape[] } | null>;
     setDraggingHandle: React.Dispatch<React.SetStateAction<{ connectorId: string; end: 'start' | 'end'; original: any } | null>>;
     getPointerPosition: (clientX: number, clientY: number) => { x: number; y: number };
   };

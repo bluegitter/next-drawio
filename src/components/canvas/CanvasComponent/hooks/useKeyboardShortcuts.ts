@@ -4,8 +4,8 @@ import type React from 'react';
 interface UseKeyboardShortcutsArgs {
   deleteSelected: () => void;
   duplicateSelected: () => void;
-  copySelection: () => number;
-  pasteClipboard: () => number;
+  copySelection: () => void;
+  pasteClipboard: () => void;
   undo: () => void;
   redo: () => void;
   clearSelection: () => void;

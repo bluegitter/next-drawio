@@ -49,6 +49,7 @@ interface UseCanvasInteractionsArgs {
     setResizeHandle: React.Dispatch<React.SetStateAction<string | null>>;
     setIsSelectingBox: React.Dispatch<React.SetStateAction<boolean>>;
     setTempLine: React.Dispatch<React.SetStateAction<SVGElement | null>>;
+    tempLine: SVGElement | null;
     setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
     setSelectedShape: (id: string | null) => void;
     setSelectedShapes: (ids: string[] | Set<string>) => void;

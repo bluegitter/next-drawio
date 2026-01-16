@@ -4,7 +4,8 @@ import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ToolType } from '@/components/EnhancedToolbar';
-import CanvasComponent, { CanvasComponentRef } from '@/components/CanvasComponent';
+import CanvasComponent from '@/components/CanvasComponent';
+import type { CanvasComponentRef } from '@/components/canvas/CanvasComponent/types';
 import PropertyPanel from '@/components/PropertyPanel';
 import { SHAPE_ICONS, CHECK_ICON, GENERAL_SHAPE_LIBRARY } from '@/constants/svgIcons';
 import { sidebarIcons, getIconUrl, primaryEquipmentIcons } from '@/constants/iconList';
@@ -73,8 +74,8 @@ export default function Home() {
 
   const refreshHistoryState = useCallback(() => {
     if (!canvasMethodsRef.current) return;
-    const nextUndo = canvasMethodsRef.current.canUndo();
-    const nextRedo = canvasMethodsRef.current.canRedo();
+    const nextUndo = canvasMethodsRef.current.canUndo;
+    const nextRedo = canvasMethodsRef.current.canRedo;
     requestAnimationFrame(() => {
       setCanUndo(nextUndo);
       setCanRedo(nextRedo);
@@ -337,8 +338,8 @@ export default function Home() {
 
   const handleCopy = useCallback(() => {
     if (!canvasMethodsRef.current?.copySelection) return;
-    const count = canvasMethodsRef.current.copySelection();
-    const nextCanPaste = canvasMethodsRef.current.hasClipboard?.() ?? count > 0;
+    canvasMethodsRef.current.copySelection();
+    const nextCanPaste = canvasMethodsRef.current.hasClipboard?.() ?? false;
     setCanPaste(nextCanPaste);
     if (canvasMethodsRef.current?.getSelectionCount) {
       setSelectionCount(canvasMethodsRef.current.getSelectionCount());
@@ -347,8 +348,8 @@ export default function Home() {
 
   const handlePaste = useCallback(() => {
     if (!canvasMethodsRef.current?.pasteClipboard) return;
-    const count = canvasMethodsRef.current.pasteClipboard();
-    const nextCanPaste = (canvasMethodsRef.current.hasClipboard?.() ?? (count > 0)) || canPaste;
+    canvasMethodsRef.current.pasteClipboard();
+    const nextCanPaste = canvasMethodsRef.current.hasClipboard?.() ?? canPaste;
     setCanPaste(nextCanPaste);
     refreshHistoryState();
     if (canvasMethodsRef.current?.getSelectionCount) {
@@ -1077,7 +1078,7 @@ export default function Home() {
                   <div className="mt-3">
                     <div className="text-xs text-gray-500 mb-2">常用符号库</div>
                     <div className="grid grid-cols-4 gap-1.5">
-                      {GENERAL_SHAPE_LIBRARY.map(item => (
+                      {GENERAL_SHAPE_LIBRARY.map((item: { key: string; label: string; icon: string }) => (
                         <button
                           key={item.key}
                           className="h-12 border border-gray-300 rounded-md bg-white hover:border-blue-500 hover:shadow-sm flex flex-col items-center justify-center text-gray-600 transition"

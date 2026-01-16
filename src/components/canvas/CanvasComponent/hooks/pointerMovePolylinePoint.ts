@@ -35,7 +35,7 @@ export const handlePolylinePointDragMove = ({
   connectorNodeSnapDistance,
   connectorNodeAlignDistance,
 }: HandlePolylinePointArgs) => {
-  const pts = parsePoints(shape.data.points);
+  const pts = parsePoints(shape.data.points || '');
   if (!pts[index]) return;
   const dx = x - dragStart.x;
   const dy = y - dragStart.y;
@@ -49,17 +49,18 @@ export const handlePolylinePointDragMove = ({
     shapes.forEach(candidate => {
       if (candidate.type === 'connector') return;
       const ports = getPortsForShape(candidate);
-      ports.forEach(port => {
+      ports.forEach((port: any) => {
         const dist = Math.hypot(port.x - nextX, port.y - nextY);
         if (dist <= connectorNodeSnapDistance && dist < bestDist) {
           bestDist = dist;
-          bestPoint = { x: port.x, y: port.y };
+          bestPoint = { x: port.x as number, y: port.y as number };
         }
       });
     });
-    if (bestPoint) {
-      nextX = bestPoint.x;
-      nextY = bestPoint.y;
+    if (bestPoint !== null) {
+      const point = bestPoint as { x: number; y: number };
+      nextX = point.x;
+      nextY = point.y;
       snappedToPort = true;
     }
   }

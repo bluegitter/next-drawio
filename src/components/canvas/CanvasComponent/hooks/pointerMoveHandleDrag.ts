@@ -122,9 +122,9 @@ export const handleConnectorHandleDragMove = ({
         if (!activePortHighlight || activePortHighlight.shapeId !== shapeId || activePortHighlight.portId !== portId) {
           if (activePortHighlight) {
             const prev = portElementsRef.current.get(activePortHighlight.shapeId)?.find(p => p.getAttribute('data-port-id') === activePortHighlight.portId);
-            if (prev) resetPortStyle(prev);
+            if (prev) resetPortStyle(prev as SVGCircleElement);
           }
-          highlightPortStyle(portEl);
+          highlightPortStyle(portEl as SVGCircleElement);
           setActivePortHighlight({ shapeId, portId });
         }
       }

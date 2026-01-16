@@ -11,7 +11,7 @@ export interface CanvasState {
   selectedIdsRef: React.MutableRefObject<Set<string>>;
   selectedShape: string | null;
   setSelectedShape: (id: string | null) => void;
-  setSelectedShapes: (ids: string[]) => void;
+  setSelectedShapes: (ids: string[] | Set<string>) => void;
   history: HistoryState[];
   setHistory: React.Dispatch<React.SetStateAction<HistoryState[]>>;
   historyIndex: number;
@@ -42,7 +42,7 @@ export interface CanvasState {
   shapeIdCounter: React.MutableRefObject<number>;
   hasCalledReady: React.MutableRefObject<boolean>;
   methodsRef: React.MutableRefObject<CanvasComponentRef | null>;
-  portElementsRef: React.MutableRefObject<Map<string, SVGElement[]>>;
+  portElementsRef: React.MutableRefObject<Map<string, SVGCircleElement[]>>;
   connectorHandleRef: React.MutableRefObject<Map<string, { start: SVGCircleElement; end: SVGCircleElement }>>;
   skipNextCanvasClickClear: React.MutableRefObject<boolean>;
   editingText: {
@@ -61,7 +61,7 @@ export interface CanvasState {
     color?: string;
   } | null;
   setEditingText: React.Dispatch<React.SetStateAction<CanvasState['editingText']>>;
-  editingInputRef: React.MutableRefObject<HTMLInputElement | null>;
+  editingInputRef: React.RefObject<HTMLInputElement>;
   draggingHandle: {
     connectorId: string;
     end: 'start' | 'end';
@@ -80,8 +80,8 @@ export interface CanvasState {
   setActivePortHighlight: React.Dispatch<React.SetStateAction<CanvasState['activePortHighlight']>>;
   hoveredShapeId: string | null;
   setHoveredShapeId: React.Dispatch<React.SetStateAction<string | null>>;
-  resizeHandlesRef: React.MutableRefObject<Map<string, SVGElement[]>>;
-  cornerHandlesRef: React.MutableRefObject<Map<string, SVGElement[]>>;
+  resizeHandlesRef: React.MutableRefObject<Map<string, SVGRectElement[]>>;
+  cornerHandlesRef: React.MutableRefObject<Map<string, SVGRectElement[]>>;
   textSelectionRef: React.MutableRefObject<Map<string, SVGRectElement>>;
   handleConnectionRef: React.MutableRefObject<boolean>;
   lastPointerRef: React.MutableRefObject<{ x: number; y: number; clientX: number; clientY: number }>;
@@ -106,7 +106,7 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
     pageOffsetYPages,
   } = props;
 
-  const svgRef = useRef<SVGSVGElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null as unknown as SVGSVGElement);
   const [shapes, setShapes] = useState<SVGShape[]>([]);
   const shapesRef = useRef<SVGShape[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -128,17 +128,17 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
   const shapeIdCounter = useRef(0);
   const hasCalledReady = useRef(false);
   const methodsRef = useRef<CanvasComponentRef | null>(null);
-  const portElementsRef = useRef<Map<string, SVGElement[]>>(new Map());
+  const portElementsRef = useRef<Map<string, SVGCircleElement[]>>(new Map());
   const connectorHandleRef = useRef<Map<string, { start: SVGCircleElement; end: SVGCircleElement }>>(new Map());
   const skipNextCanvasClickClear = useRef(false);
   const [editingText, setEditingText] = useState<CanvasState['editingText']>(null);
-  const editingInputRef = useRef<HTMLInputElement | null>(null);
+  const editingInputRef = useRef<HTMLInputElement>(null as unknown as HTMLInputElement);
   const [draggingHandle, setDraggingHandle] = useState<CanvasState['draggingHandle']>(null);
   const [draggingPolylinePoint, setDraggingPolylinePoint] = useState<CanvasState['draggingPolylinePoint']>(null);
   const [activePortHighlight, setActivePortHighlight] = useState<CanvasState['activePortHighlight']>(null);
   const [hoveredShapeId, setHoveredShapeId] = useState<string | null>(null);
-  const resizeHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
-  const cornerHandlesRef = useRef<Map<string, SVGElement[]>>(new Map());
+  const resizeHandlesRef = useRef<Map<string, SVGRectElement[]>>(new Map());
+  const cornerHandlesRef = useRef<Map<string, SVGRectElement[]>>(new Map());
   const textSelectionRef = useRef<Map<string, SVGRectElement>>(new Map());
   const handleConnectionRef = useRef(false);
   const lastPointerRef = useRef({ x: 0, y: 0, clientX: 0, clientY: 0 });
@@ -174,7 +174,7 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
     setSelectedIds(next);
   }, []);
 
-  const setSelectedShapes = useCallback((ids: string[]) => {
+  const setSelectedShapes = useCallback((ids: string[] | Set<string>) => {
     const next = new Set(ids);
     selectedIdsRef.current = next;
     setSelectedIds(next);

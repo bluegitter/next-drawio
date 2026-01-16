@@ -20,9 +20,9 @@ interface UseCanvasMethodsArgs {
   ungroupSelected: () => void;
   deleteSelected: () => void;
   clearCanvas: () => void;
-  exportCanvas: (format: 'png' | 'svg' | 'json', transparent?: boolean) => void;
+  exportCanvas: (format: 'png' | 'jpg' | 'svg') => void;
   getCanvas: () => SVGSVGElement | null;
-  getSelectedShape: () => string | null;
+  getSelectedShape: (selectedShapeId?: string | null | undefined) => SVGElement | null;
   getSelectionCount: () => number;
   duplicateSelected: () => void;
   bringToFront: () => void;
@@ -45,8 +45,8 @@ interface UseCanvasMethodsArgs {
   importJson: (json: string) => void;
   startConnection: (fromShape: string, fromPortId?: string) => void;
   connectShapes: (fromShape: string, toShape: string, fromPortId?: string, toPortId?: string) => void;
-  canUndo: boolean;
-  canRedo: boolean;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
   addShapeAt: (type: string, position: { x: number; y: number }) => void;
   setZoom: (next: number) => number;
   zoomBy: (factor: number) => number;

@@ -44,7 +44,7 @@ interface UseCanvasControllerActionsArgs {
     cornerHandlesRef: React.MutableRefObject<Map<string, SVGRectElement[]>>;
     textSelectionRef: React.MutableRefObject<Map<string, SVGRectElement>>;
     handleConnectionRef: React.MutableRefObject<boolean>;
-    copyBufferRef: React.MutableRefObject<SVGShape[]>;
+    copyBufferRef: React.MutableRefObject<{ ids: string[]; shapes: SVGShape[] } | null>;
     setDraggingHandle: React.Dispatch<React.SetStateAction<{ connectorId: string; end: 'start' | 'end'; original: any } | null>>;
     setIsResizing: React.Dispatch<React.SetStateAction<boolean>>;
     setResizeHandle: React.Dispatch<React.SetStateAction<string | null>>;
@@ -204,7 +204,7 @@ export const useCanvasControllerActions = ({ props, updateCylinderPath, updateCl
     showTextSelection: selectionUi.showTextSelection,
     refreshResizeHandles: selectionUi.refreshResizeHandles,
     setEditingText,
-    editingText,
+    editingText: editingText ? { id: editingText.id, value: (editingText as any).value || '' } : null,
   });
 
   const selectionActions = useSelectionActions({
