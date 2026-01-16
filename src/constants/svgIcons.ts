@@ -27,3 +27,5 @@ export const GENERAL_SHAPE_LIBRARY: { key: string; label: string; icon: string }
   { key: 'cloud', label: '云', icon: svg("<path d='M6 5 C1.2 5 0 8 3.2 9 C0 10.5 3.8 13 6.4 11.6 C8 13.8 14 13.8 15.6 11.6 C19.2 11.6 19.2 9.2 16.6 8 C19.2 6 16 3.6 13 4.6 C10.8 3.0 6.4 3.0 6 5 Z'/>") },
   { key: 'wave', label: '波形', icon: svg("<path d='M4 15c2.5-4 5.5-4 8 0s5.5 4 8 0'/>") },
 ];
+
+export { CHECK_ICON, SHAPE_ICONS, GENERAL_SHAPE_LIBRARY };

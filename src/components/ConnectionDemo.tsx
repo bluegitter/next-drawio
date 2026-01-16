@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { CanvasComponent, CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
+import { CanvasComponent, CanvasComponentRef } from '@/components/CanvasComponent';
 import { ConnectionManager, ConnectionPathCalculator, DefaultConnectionPointGenerator } from '@/lib/connection';
 import { ConnectionData, ConnectionLineStyle, ConnectionEndStyle } from '@/types/connection';
 

@@ -107,7 +107,7 @@ A: 在 `src/types/` 目录下创建新的类型文件，并在 `index.ts` 中重
 - `CanvasProvider.tsx` - 画布上下文提供者
 - `Toolbar.tsx` - 工具栏组件
 - `PropertyPanel.tsx` - 属性面板组件
-- `InteractiveCanvasComponent.tsx` - 交互式画布组件
+- `CanvasComponent.tsx` - 交互式画布组件
 - [其他画布组件]
 
 ## 变更记录 (Changelog)

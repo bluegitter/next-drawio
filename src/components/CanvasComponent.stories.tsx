@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState, useRef } from 'react';
-import InteractiveCanvasComponent, { CanvasComponentRef } from './InteractiveCanvasComponent';
+import CanvasComponent, { CanvasComponentRef } from './CanvasComponent';
 
-const meta: Meta<typeof InteractiveCanvasComponent> = {
+const meta: Meta<typeof CanvasComponent> = {
   title: 'Canvas/InteractiveCanvas',
-  component: InteractiveCanvasComponent,
+  component: CanvasComponent,
   parameters: {
     layout: 'centered',
     docs: {
@@ -59,7 +59,7 @@ export const Default: Story = {
 
     return (
       <div className="flex flex-col gap-4">
-        <InteractiveCanvasComponent
+        <CanvasComponent
           {...args}
           width={args.width ?? 1200}
           height={args.height ?? 800}
@@ -241,7 +241,7 @@ export const InteractiveDemo: Story = {
           <strong>状态:</strong> {selectedInfo}
         </div>
         
-        <InteractiveCanvasComponent
+        <CanvasComponent
           {...args}
           width={args.width ?? 1200}
           height={args.height ?? 800}
@@ -382,7 +382,7 @@ export const ConnectionDemo: Story = {
           </div>
         </div>
 
-        <InteractiveCanvasComponent
+        <CanvasComponent
           {...args}
           width={args.width ?? 800}
           height={args.height ?? 600}
@@ -539,7 +539,7 @@ export const AdvancedConnectionDemo: Story = {
           </div>
         </div>
 
-        <InteractiveCanvasComponent
+        <CanvasComponent
           {...args}
           width={args.width ?? 900}
           height={args.height ?? 700}

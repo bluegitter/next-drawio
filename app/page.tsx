@@ -4,7 +4,7 @@ import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ToolType } from '@/components/EnhancedToolbar';
-import InteractiveCanvasComponent, { CanvasComponentRef } from '@/components/InteractiveCanvasComponent';
+import CanvasComponent, { CanvasComponentRef } from '@/components/CanvasComponent';
 import PropertyPanel from '@/components/PropertyPanel';
 import { SHAPE_ICONS, CHECK_ICON, GENERAL_SHAPE_LIBRARY } from '@/constants/svgIcons';
 import { sidebarIcons, getIconUrl, primaryEquipmentIcons } from '@/constants/iconList';
@@ -1221,7 +1221,7 @@ export default function Home() {
                 }}
               />
             )}
-            <InteractiveCanvasComponent
+            <CanvasComponent
               ref={canvasRef}
               width={PAGE_WIDTH * (pageNegX + pageCountX)}
               height={PAGE_HEIGHT * (pageNegY + pageCountY)}

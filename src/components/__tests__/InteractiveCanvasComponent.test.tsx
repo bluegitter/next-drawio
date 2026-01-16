@@ -1,8 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { CanvasComponent } from './InteractiveCanvasComponent';
+import { CanvasComponent } from './CanvasComponent';
 
-describe('InteractiveCanvasComponent Connection Functionality', () => {
+describe('CanvasComponent Connection Functionality', () => {
   let mockCanvas: HTMLCanvasElement;
   let mockOnReady: ReturnType<typeof vi.fn>;
   let mockOnShapeSelect: ReturnType<typeof vi.fn>;
