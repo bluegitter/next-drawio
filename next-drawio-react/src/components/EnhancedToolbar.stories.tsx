@@ -28,10 +28,10 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     currentTool: 'select',
-    onToolChange: (tool: ToolType) => console.log('Tool changed:', tool),
-    onExport: (format: 'png' | 'jpg' | 'svg') => console.log('Export:', format),
-    onUndo: () => console.log('Undo'),
-    onRedo: () => console.log('Redo'),
+    onToolChange: () => {},
+    onExport: () => {},
+    onUndo: () => {},
+    onRedo: () => {},
     canUndo: true,
     canRedo: false,
     disabled: false,
@@ -42,10 +42,10 @@ export const Default: Story = {
 export const RectangleSelected: Story = {
   args: {
     currentTool: 'rectangle',
-    onToolChange: (tool: ToolType) => console.log('Tool changed:', tool),
-    onExport: (format: 'png' | 'jpg' | 'svg') => console.log('Export:', format),
-    onUndo: () => console.log('Undo'),
-    onRedo: () => console.log('Redo'),
+    onToolChange: () => {},
+    onExport: () => {},
+    onUndo: () => {},
+    onRedo: () => {},
     canUndo: true,
     canRedo: true,
     disabled: false,
@@ -56,10 +56,10 @@ export const RectangleSelected: Story = {
 export const ConnectingMode: Story = {
   args: {
     currentTool: 'connect',
-    onToolChange: (tool: ToolType) => console.log('Tool changed:', tool),
-    onExport: (format: 'png' | 'jpg' | 'svg') => console.log('Export:', format),
-    onUndo: () => console.log('Undo'),
-    onRedo: () => console.log('Redo'),
+    onToolChange: () => {},
+    onExport: () => {},
+    onUndo: () => {},
+    onRedo: () => {},
     canUndo: true,
     canRedo: false,
     disabled: false,
@@ -70,10 +70,10 @@ export const ConnectingMode: Story = {
 export const DisabledState: Story = {
   args: {
     currentTool: 'select',
-    onToolChange: (tool: ToolType) => console.log('Tool changed:', tool),
-    onExport: (format: 'png' | 'jpg' | 'svg') => console.log('Export:', format),
-    onUndo: () => console.log('Undo'),
-    onRedo: () => console.log('Redo'),
+    onToolChange: () => {},
+    onExport: () => {},
+    onUndo: () => {},
+    onRedo: () => {},
     canUndo: false,
     canRedo: false,
     disabled: true,

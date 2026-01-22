@@ -38,6 +38,7 @@ export type UsePointerMoveArgs = {
   updateConnectorPoints: (shape: SVGShape, points: Array<[number, number]>) => void;
   updatePolylinePoints: (shape: SVGShape, points: Array<[number, number]>) => void;
   refreshResizeHandles: (shape: SVGShape) => void;
+  refreshCornerHandles: (shape: SVGShape) => void;
   getPointerPosition: (clientX: number, clientY: number) => { x: number; y: number };
   getShapeBounds: (shape: SVGShape) => { minX: number; minY: number; maxX: number; maxY: number };
   getConnectorPoints: (shape: SVGShape) => Array<[number, number]>;
@@ -92,6 +93,7 @@ export const usePointerMove = ({
   updateConnectorPoints,
   updatePolylinePoints,
   refreshResizeHandles,
+  refreshCornerHandles,
   getPointerPosition,
   getShapeBounds,
   getConnectorPoints,
@@ -207,7 +209,7 @@ export const usePointerMove = ({
             }
             updateShapePosition(shape, dx, dy);
             refreshResizeHandles(shape);
-            showCornerHandles(shape);
+            refreshCornerHandles(shape);
           }
         });
 
@@ -231,8 +233,9 @@ export const usePointerMove = ({
         });
 
         setShapesState(() => nextShapes);
-        setDragStart({ x, y, viewBoxMinX: viewBoxMinX.value, viewBoxMinY: viewBoxMinY.value });
       }
+
+      setDragStart({ x, y, viewBoxMinX: viewBoxMinX.value, viewBoxMinY: viewBoxMinY.value });
     } else if (isResizing.value) {
       const dx = x - dragStart.value.x;
       const dy = y - dragStart.value.y;
@@ -252,6 +255,7 @@ export const usePointerMove = ({
           setDragStart,
           updateShapeSize,
           refreshResizeHandles,
+          refreshCornerHandles,
           showCornerHandles,
           updateConnectionLine,
           viewBoxMinX: viewBoxMinX.value,

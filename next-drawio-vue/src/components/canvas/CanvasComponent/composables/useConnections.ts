@@ -11,6 +11,7 @@ type UseConnectionsArgs = {
   createSVGElement: (tagName: string) => SVGElement | null;
   startConnection: (fromShape: string, fromPortId?: string) => void;
   getConnectorHandleMouseDown: (connector: SVGShape, end: 'start' | 'end') => (e: MouseEvent) => void;
+  getBounds?: (shape: SVGShape) => { x: number; y: number; w: number; h: number };
 };
 
 export const useConnections = ({
@@ -22,10 +23,11 @@ export const useConnections = ({
   createSVGElement,
   startConnection,
   getConnectorHandleMouseDown,
+  getBounds,
 }: UseConnectionsArgs) => {
   const resetPortStyle = (portEl: SVGElement) => {
-    portEl.setAttribute('fill', '#22c55e');
-    portEl.setAttribute('stroke', '#0f9f4f');
+    portEl.setAttribute('fill', '#fbbf24');
+    portEl.setAttribute('stroke', '#d97706');
     portEl.setAttribute('stroke-width', '2');
     portEl.setAttribute('r', '5');
   };
@@ -76,14 +78,34 @@ export const useConnections = ({
     const ports = getPortsForShape(shape);
     const created: SVGElement[] = [];
 
+    const rotation = shape.data.rotation || 0;
+    const scale = shape.data.scale || 1;
+    const bounds = getBounds?.(shape) || { x: 0, y: 0, w: 0, h: 0 };
+    const centerX = bounds.x + bounds.w / 2;
+    const centerY = bounds.y + bounds.h / 2;
+
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
     ports.forEach((port) => {
       const portCircle = createSVGElement('circle');
       if (!portCircle) return;
-      portCircle.setAttribute('cx', String(port.x));
-      portCircle.setAttribute('cy', String(port.y));
+      
+      const dx = port.x - centerX;
+      const dy = port.y - centerY;
+      const scaledX = dx * scale;
+      const scaledY = dy * scale;
+      const rx = scaledX * cos - scaledY * sin;
+      const ry = scaledX * sin + scaledY * cos;
+      const transformedX = centerX + rx;
+      const transformedY = centerY + ry;
+      
+      portCircle.setAttribute('cx', String(transformedX));
+      portCircle.setAttribute('cy', String(transformedY));
       portCircle.setAttribute('r', '5');
-      portCircle.setAttribute('fill', '#22c55e');
-      portCircle.setAttribute('stroke', '#0f9f4f');
+      portCircle.setAttribute('fill', '#fbbf24');
+      portCircle.setAttribute('stroke', '#d97706');
       portCircle.setAttribute('stroke-width', '1.5');
       portCircle.setAttribute('data-shape-id', shape.id);
       portCircle.setAttribute('data-port-id', port.id);
@@ -132,8 +154,8 @@ export const useConnections = ({
       c.setAttribute('cx', String(x));
       c.setAttribute('cy', String(y));
       c.setAttribute('r', '6');
-      c.setAttribute('fill', '#22c55e');
-      c.setAttribute('stroke', '#0f9f4f');
+      c.setAttribute('fill', '#fbbf24');
+      c.setAttribute('stroke', '#d97706');
       c.setAttribute('stroke-width', '2');
       c.setAttribute('data-connector-id', connector.id);
       c.setAttribute('data-end', end);
@@ -155,12 +177,34 @@ export const useConnections = ({
     const ports = portElementsRef.value.get(shape.id);
     if (!ports || ports.length === 0) return;
     const portPositions = getPortsForShape(shape);
+    
+    const rotation = shape.data.rotation || 0;
+    const scale = shape.data.scale || 1;
+    const bounds = getBounds?.(shape) || { x: 0, y: 0, w: 0, h: 0 };
+    const centerX = bounds.x + bounds.w / 2;
+    const centerY = bounds.y + bounds.h / 2;
+
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
     ports.forEach((portEl) => {
       const portId = portEl.getAttribute('data-port-id');
       const pos = portPositions.find((p) => p.id === portId);
       if (pos) {
-        portEl.setAttribute('cx', String(pos.x));
-        portEl.setAttribute('cy', String(pos.y));
+        const dx = pos.x - centerX;
+        const dy = pos.y - centerY;
+        const scaledX = dx * scale;
+        const scaledY = dy * scale;
+        const rx = scaledX * cos - scaledY * sin;
+        const ry = scaledX * sin + scaledY * cos;
+        const transformedX = centerX + rx;
+        const transformedY = centerY + ry;
+        
+        portEl.setAttribute('cx', String(transformedX));
+        portEl.setAttribute('cy', String(transformedY));
+        portEl.setAttribute('r', '5');
+        portEl.setAttribute('stroke-width', '1.5');
       }
     });
   };

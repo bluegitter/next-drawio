@@ -69,6 +69,7 @@ interface UseCanvasInteractionsArgs {
     };
     selectionUi: {
       refreshResizeHandles: (shape: SVGShape) => void;
+      refreshCornerHandles: (shape: SVGShape) => void;
       showCornerHandles: (shape: SVGShape) => void;
       showResizeHandles: (shape: SVGShape) => void;
       hideResizeHandles: (id: string) => void;
@@ -152,6 +153,7 @@ export const useCanvasInteractions = ({ state, controller, helpers, connectorNod
     updateConnectorPoints: controller.geometry.updateConnectorPoints,
     updatePolylinePoints: controller.geometry.updatePolylinePoints,
     refreshResizeHandles: controller.selectionUi.refreshResizeHandles,
+    refreshCornerHandles: controller.selectionUi.refreshCornerHandles,
     getPointerPosition: helpers.getPointerPosition,
     getShapeBounds: controller.geometry.getShapeBounds,
     getConnectorPoints: helpers.getConnectorPoints,

@@ -111,7 +111,6 @@ export const WithCustomBackground: Story = {
     backgroundColor: '#f3f4f6',
     autoResize: false,
     onReady: (canvas: SVGSVGElement, methods: CanvasComponentRef) => {
-      console.log('Canvas ready:', canvas);
       setTimeout(() => {
         methods.addRectangle();
         methods.addCircle();
@@ -156,21 +155,16 @@ export const InteractiveDemo: Story = {
     backgroundColor: '#ffffff',
     autoResize: false,
     onReady: (canvas: SVGSVGElement, methods: CanvasComponentRef) => {
-      console.log('Canvas ready:', canvas);
       // 添加一些示例图形
       setTimeout(() => {
         methods.addRectangle();
         methods.addCircle();
         methods.addTriangle();
-        console.log('已添加示例图形');
       }, 100);
     },
     onShapeSelect: (shape: SVGElement | null) => {
-      const shapeType = shape?.tagName.toLowerCase() || '无';
-      console.log(`选中图形: ${shapeType}`);
     },
     onCanvasChange: () => {
-      console.log('画布内容已更改');
     },
   },
   render: (args) => {

@@ -1,4 +1,5 @@
 import { ShapeDefinition, ShapeContext, ShapeBounds, Point } from './types';
+import { DEFAULTS } from '../constants/defaults';
 
 export const roundedRectShape: ShapeDefinition = {
   type: 'roundedRect',
@@ -145,8 +146,7 @@ export const roundedRectShape: ShapeDefinition = {
   },
   getCornerHandles: (shape) => {
     const { x = 0, y = 0, width = 0 } = shape.data;
-    const handleSize = 10;
-    const offset = handleSize * 1.2;
+    const offset = DEFAULTS.CORNER_HANDLE.offset;
     return [
       {
         id: `${shape.id}-corner-top`,

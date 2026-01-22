@@ -6,7 +6,13 @@
       "Bash(pnpm dev)",
       "Bash(find:*)",
       "Bash(pnpm build:core:*)",
-      "Bash(pnpm build:vue:*)"
+      "Bash(pnpm build:vue:*)",
+      "Bash(pnpm build:*)",
+      "Bash(node:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx vue-tsc:*)"
     ],
     "deny": [],
     "ask": []

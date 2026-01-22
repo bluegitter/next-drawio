@@ -15,6 +15,7 @@ type HandleResizeArgs = {
   setDragStart: (next: { x: number; y: number; viewBoxMinX?: number; viewBoxMinY?: number }) => void;
   updateShapeSize: (shape: SVGShape, handle: string, dx: number, dy: number) => void;
   refreshResizeHandles: (shape: SVGShape) => void;
+  refreshCornerHandles: (shape: SVGShape) => void;
   showCornerHandles: (shape: SVGShape) => void;
   updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
   viewBoxMinX: number;
@@ -36,6 +37,7 @@ export const handleResizeMove = ({
   setDragStart,
   updateShapeSize,
   refreshResizeHandles,
+  refreshCornerHandles,
   showCornerHandles,
   updateConnectionLine,
   viewBoxMinX,
@@ -90,6 +92,7 @@ export const handleResizeMove = ({
     if (shape) {
       updateShapeSize(shape, resizeHandle, dx, dy);
       refreshResizeHandles(shape);
+      refreshCornerHandles(shape);
 
       if (shape.type === 'roundedRect') {
         showCornerHandles(shape);

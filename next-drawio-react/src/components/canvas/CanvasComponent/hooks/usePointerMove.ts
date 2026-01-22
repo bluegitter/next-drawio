@@ -39,6 +39,7 @@ interface UsePointerMoveArgs {
   updateConnectorPoints: (shape: SVGShape, points: Array<[number, number]>) => void;
   updatePolylinePoints: (shape: SVGShape, points: Array<[number, number]>) => void;
   refreshResizeHandles: (shape: SVGShape) => void;
+  refreshCornerHandles: (shape: SVGShape) => void;
   getPointerPosition: (clientX: number, clientY: number) => { x: number; y: number };
   getShapeBounds: (shape: SVGShape) => { minX: number; minY: number; maxX: number; maxY: number };
   getConnectorPoints: (shape: SVGShape) => Array<[number, number]>;
@@ -91,6 +92,7 @@ export const usePointerMove = ({
   updateConnectorPoints,
   updatePolylinePoints,
   refreshResizeHandles,
+  refreshCornerHandles,
   getPointerPosition,
   getShapeBounds,
   getConnectorPoints,
@@ -202,6 +204,7 @@ export const usePointerMove = ({
             }
             updateShapePosition(shape, dx, dy);
             refreshResizeHandles(shape);
+            refreshCornerHandles(shape);
           }
         });
 
@@ -258,6 +261,7 @@ export const usePointerMove = ({
         setDragStart,
         updateShapeSize,
         refreshResizeHandles,
+        refreshCornerHandles,
         showCornerHandles,
         updateConnectionLine,
       });
@@ -324,5 +328,5 @@ export const usePointerMove = ({
         setHoveredShapeId(null);
       }
     }
-  }, [activePortHighlight, connectionStart, connectorNodeAlignDistance, connectorNodeSnapDistance, disableShapeHover, dragStart, draggingCornerHandle, draggingHandle, draggingPolylinePoint, enableConnectorNodeSnap, findNearestPortElement, getConnectorPoints, getPointerPosition, getShapeBounds, hidePorts, highlightPortStyle, hoveredShapeId, isConnecting, isDragging, isLineConnected, isResizing, isSelectingBox, parsePoints, refreshResizeHandles, resetPortStyle, resizeHandle, selectedIds, selectedShape, selectionOriginRef, setActivePortHighlight, setDragStart, setHoveredShapeId, setSelectionRect, setShapesState, setDraggingCornerHandle, shapes, showCornerHandles, showPorts, tempLine, updateConnectionLine, updateConnectorPoints, updatePolylinePoints, updateShapePosition, updateShapeSize, svgRef, portElementsRef, connectorHandleRef, lastPointerRef]);
+  }, [activePortHighlight, connectionStart, connectorNodeAlignDistance, connectorNodeSnapDistance, disableShapeHover, dragStart, draggingCornerHandle, draggingHandle, draggingPolylinePoint, enableConnectorNodeSnap, findNearestPortElement, getConnectorPoints, getPointerPosition, getShapeBounds, hidePorts, highlightPortStyle, hoveredShapeId, isConnecting, isDragging, isLineConnected, isResizing, isSelectingBox, parsePoints, refreshResizeHandles, refreshCornerHandles, resetPortStyle, resizeHandle, selectedIds, selectedShape, selectionOriginRef, setActivePortHighlight, setDragStart, setHoveredShapeId, setSelectionRect, setShapesState, setDraggingCornerHandle, shapes, showCornerHandles, showPorts, tempLine, updateConnectionLine, updateConnectorPoints, updatePolylinePoints, updateShapePosition, updateShapeSize, svgRef, portElementsRef, connectorHandleRef, lastPointerRef]);
 };

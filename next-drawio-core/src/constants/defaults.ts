@@ -75,6 +75,17 @@ export const DEFAULTS = {
     tolerance: 5,
   },
 
+  // 圆角handle默认值
+  CORNER_HANDLE: {
+    size: 5,
+    offset: 6, // size * 1.2
+    fill: '#f59e0b',
+    stroke: '#d97706',
+    strokeWidth: 2,
+    rotation: 45, // 菱形旋转角度
+    opacity: 0.8,
+  },
+
   // 图层默认值
   LAYER: {
     name: '图层 1',

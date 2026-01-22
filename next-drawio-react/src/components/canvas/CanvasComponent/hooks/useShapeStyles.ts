@@ -17,6 +17,7 @@ interface UseShapeStylesArgs {
   tintSvgText: (svgText: string, color: string) => string;
   toDataUri: (svgText: string) => string | null;
   tintDataUri: (dataUri: string, color: string) => string;
+  updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
 }
 
 export const useShapeStyles = ({
@@ -34,6 +35,7 @@ export const useShapeStyles = ({
   tintSvgText,
   toDataUri,
   tintDataUri,
+  updateConnectionLine,
 }: UseShapeStylesArgs) => {
   const rotateSelected = useCallback((angle: number) => {
     updateSelectedShape(shape => {
@@ -70,7 +72,18 @@ export const useShapeStyles = ({
       shape.data.scale = safeScale;
       applyTransform(shape);
     });
-  }, [applyTransform, updateSelectedShape]);
+    setTimeout(() => {
+      selectedIdsRef.current.forEach(id => {
+        const shape = shapesRef.current.find(s => s.id === id);
+        if (shape?.connections) {
+          shape.connections.forEach(connId => {
+            const connLine = shapesRef.current.find(s => s.id === connId);
+            if (connLine) updateConnectionLine(connLine, shape.id);
+          });
+        }
+      });
+    }, 0);
+  }, [applyTransform, updateSelectedShape, selectedIdsRef, shapesRef, updateConnectionLine]);
 
   const updateLineMarkers = useCallback((shape: SVGShape) => {
     if (shape.type !== 'line') return;
@@ -86,11 +99,9 @@ export const useShapeStyles = ({
   const changeSelectedFill = useCallback((color: string) => {
     const targetIds = selectedIdsRef.current.size ? selectedIdsRef.current : selectedIds;
     if (targetIds.size === 0) {
-      console.warn('[changeSelectedFill] no targets', { selectedIds: Array.from(selectedIds) });
       return;
     }
     const currentShapes = shapesRef.current;
-    console.log('[changeSelectedFill] apply', { color, targetCount: targetIds.size, targetIds: Array.from(targetIds), shapesCount: currentShapes.length });
     const updatedShapes = currentShapes.map(shape => {
       if (!targetIds.has(shape.id)) return shape;
       const nextShape = { ...shape, data: { ...shape.data } };
@@ -99,13 +110,6 @@ export const useShapeStyles = ({
         nextShape.element.setAttribute('fill', 'none');
       } else if (nextShape.type === 'image') {
         const originalSvg = nextShape.data.originalSvgText || decodeDataUri(nextShape.data.originalHref || nextShape.data.href || '');
-        console.log('[changeSelectedFill:image] start', {
-          shapeId: nextShape.id,
-          iconName: nextShape.data.iconName,
-          color,
-          hasOriginalSvg: !!nextShape.data.originalSvgText,
-          decodedLen: originalSvg?.length ?? 0,
-        });
         if (originalSvg) {
           const tintedText = tintSvgText(originalSvg, color);
           const tintedUri = toDataUri(tintedText);
@@ -113,9 +117,7 @@ export const useShapeStyles = ({
             nextShape.data.href = tintedUri;
             (nextShape.element as SVGImageElement).setAttribute('href', tintedUri);
             (nextShape.element as SVGImageElement).setAttributeNS('http://www.w3.org/1999/xlink', 'href', tintedUri);
-            console.log('[changeSelectedFill:image] applied tintedUri', { tintedUriLength: tintedUri.length });
           } else {
-            console.warn('[changeSelectedFill:image] toDataUri empty');
           }
         } else {
           const href = nextShape.data.originalHref || nextShape.data.href || '';
@@ -123,7 +125,6 @@ export const useShapeStyles = ({
           nextShape.data.href = tinted;
           (nextShape.element as SVGImageElement).setAttribute('href', tinted);
           (nextShape.element as SVGImageElement).setAttributeNS('http://www.w3.org/1999/xlink', 'href', tinted);
-          console.log('[changeSelectedFill:image] fallback tintDataUri applied', { tintedLength: tinted.length });
         }
       } else if (nextShape.type === 'cylinder') {
         nextShape.data.fill = color;
@@ -137,7 +138,6 @@ export const useShapeStyles = ({
       return nextShape;
     });
     setShapesState(() => updatedShapes);
-    console.log('[changeSelectedFill] shapes updated, saving history');
     saveToHistory(updatedShapes, targetIds);
   }, [decodeDataUri, saveToHistory, selectedIds, selectedIdsRef, setShapesState, shapesRef, tintDataUri, tintSvgText, toDataUri, updateCloudPath, updateCylinderPath]);
 

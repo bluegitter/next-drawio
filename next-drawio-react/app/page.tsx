@@ -3,7 +3,7 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { ToolType } from '@/components/EnhancedToolbar';
 import type { CanvasComponentRef } from '@/components/canvas/CanvasComponent/types';
-import PropertyPanel from '@/components/PropertyPanel';
+import { PropertyPanel } from '@/components/PropertyPanel';
 import TopMenuBar from '@/components/editor/TopMenuBar';
 import Toolbar from '@/components/editor/Toolbar';
 import LeftSidebar from '@/components/editor/LeftSidebar';
@@ -14,6 +14,7 @@ import { useCanvasZoom } from '@/components/editor/hooks/useCanvasZoom';
 import { useCanvasBounds } from '@/components/editor/hooks/useCanvasBounds';
 import { useSelectionStyleActions } from '@/components/editor/hooks/useSelectionStyleActions';
 import { useCanvasActions } from '@/components/editor/hooks/useCanvasActions';
+import { CanvasStateManager } from '@drawio/core';
 import './globals.css';
 
 const PAGE_WIDTH = 1200;
@@ -21,10 +22,16 @@ const PAGE_HEIGHT = 700;
 const GRID_BG = 'data:image/svg+xml;base64,PHN2ZyBzdHlsZT0iY29sb3Itc2NoZW1lOiBsaWdodCBkYXJrOyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gMCAxMCBMIDQwIDEwIE0gMTAgMCBMIDEwIDQwIE0gMCAyMCBMIDQwIDIwIE0gMjAgMCBMIDIwIDQwIE0gMCAzMCBMIDQwIDMwIE0gMzAgMCBMIDMwIDQwIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOmxpZ2h0LWRhcmsoI2QwZDBkMCwgIzQyNDI0Mik7IiBzdHJva2U9IiNkMGQwZDAiIG9wYWNpdHk9IjAuMiIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6bGlnaHQtZGFyaygjZDBkMGQwLCAjNDI0MjQyKTsiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+';
 
 export default function Home() {
+  // 创建新的状态管理器实例
+  const [stateManager] = useState(() => new CanvasStateManager({
+    maxHistory: 50
+  }));
+
   const [canvasWidth, setCanvasWidth] = useState<number>(PAGE_WIDTH);
   const [canvasHeight, setCanvasHeight] = useState<number>(PAGE_HEIGHT);
   const [backgroundColor] = useState<string>('#ffffff');
   const [currentTool, setCurrentTool] = useState<ToolType>('select');
+  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const [selectedShape, setSelectedShape] = useState<SVGElement | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -69,6 +76,21 @@ export default function Home() {
       canvasMethodsRef.current = canvasRef.current;
     }
   });
+
+  // 订阅状态管理器的变化
+  useEffect(() => {
+    const unsubscribe = stateManager.subscribe((event) => {
+      if (event.type === 'selection') {
+        const selectedIds = stateManager.selection.getSelectedIds();
+        setSelectedShapeId(selectedIds.length > 0 ? selectedIds[0] : null);
+        setSelectionCount(selectedIds.length);
+      } else if (event.type === 'zoom') {
+        setZoom(event.newValue);
+      }
+    });
+
+    return unsubscribe;
+  }, [stateManager]);
 
   useEffect(() => {
     const totalX = pageNegX + pageCountX;
@@ -136,13 +158,25 @@ export default function Home() {
   }, [refreshHistoryState]);
 
   const handleShapeSelect = useCallback((shape: SVGElement | null) => {
-    setSelectedShape(shape);
+    // 仍然保留旧的画布选择逻辑，但同时更新状态管理器
     if (canvasMethodsRef.current?.getSelectionCount) {
       setSelectionCount(canvasMethodsRef.current.getSelectionCount());
     } else {
       setSelectionCount(shape ? 1 : 0);
     }
-  }, []);
+
+    // 更新selectedShape状态
+    setSelectedShape(shape);
+
+    // 如果有形状ID，尝试同步到状态管理器
+    if (shape?.id) {
+      setSelectedShapeId(shape.id);
+      stateManager.selection.selectSingle(shape.id);
+    } else {
+      setSelectedShapeId(null);
+      stateManager.selection.clearSelection();
+    }
+  }, [stateManager]);
 
   const handleCanvasChange = useCallback(() => {
     refreshHistoryState();
@@ -310,7 +344,7 @@ export default function Home() {
   }, []);
 
   const selectionCountFromCanvas = canvasMethodsRef.current?.getSelectionCount?.() ?? selectionCount;
-  const hasSelection = selectionCountFromCanvas > 0 || !!selectedShape;
+  const hasSelection = selectionCountFromCanvas > 0 || !!selectedShapeId;
   const multiSelected = selectionCountFromCanvas > 1;
   const clipboardReady = canvasMethodsRef.current?.hasClipboard?.() ?? canPaste;
 
@@ -401,6 +435,7 @@ export default function Home() {
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             <PropertyPanel
               selectedShape={selectedShape}
+              manager={stateManager}
               onFillChange={handleFillChange}
               onStrokeChange={handleStrokeChange}
               onStrokeWidthChange={handleStrokeWidthChange}

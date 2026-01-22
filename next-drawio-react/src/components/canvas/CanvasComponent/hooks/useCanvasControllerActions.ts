@@ -190,6 +190,7 @@ export const useCanvasControllerActions = ({ props, updateCylinderPath, updateCl
     createSVGElement: base.geometry.createSVGElement,
     startConnection: connectionActions.startConnection,
     getConnectorHandleMouseDown: connectionActions.getConnectorHandleMouseDown,
+    getBounds: base.geometry.getBounds,
   });
 
   const shapeOps = useShapes({
@@ -203,6 +204,7 @@ export const useCanvasControllerActions = ({ props, updateCylinderPath, updateCl
     saveToHistory: base.historyActions.saveToHistory,
     showTextSelection: selectionUi.showTextSelection,
     refreshResizeHandles: selectionUi.refreshResizeHandles,
+    refreshCornerHandles: selectionUi.refreshCornerHandles,
     setEditingText,
     editingText: editingText ? { id: editingText.id, value: (editingText as any).value || '' } : null,
   });
@@ -268,6 +270,7 @@ export const useCanvasControllerActions = ({ props, updateCylinderPath, updateCl
     tintSvgText,
     toDataUri,
     tintDataUri,
+    updateConnectionLine: base.geometry.updateConnectionLine,
   });
 
   const connectorNodes = useConnectorNodes({

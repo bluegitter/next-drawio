@@ -31,7 +31,32 @@ export const useCanvasGeometry = ({ svgRef, shapes, shapeIdCounter }: UseCanvasG
   const getPortPositionById = (shape: SVGShape, portId?: string | null) => {
     if (!portId) return null;
     const ports = getPortsForShape(shape);
-    return ports.find((p) => p.id === portId) || null;
+    const port = ports.find((p) => p.id === portId);
+    if (!port) return null;
+
+    // Apply shape transformations to port position
+    const { rotation = 0, scale = 1 } = shape.data;
+    if (rotation === 0 && scale === 1) {
+      return port;
+    }
+
+    const center = getShapeCenter(shape);
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    const dx = port.x - center.x;
+    const dy = port.y - center.y;
+    const scaledX = dx * scale;
+    const scaledY = dy * scale;
+    const rx = scaledX * cos - scaledY * sin;
+    const ry = scaledX * sin + scaledY * cos;
+
+    return {
+      ...port,
+      x: center.x + rx,
+      y: center.y + ry
+    };
   };
 
   const ensureConnectorPolylineElement = (shape: SVGShape, pointsString: string) => {

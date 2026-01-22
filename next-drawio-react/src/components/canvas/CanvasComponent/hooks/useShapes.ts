@@ -14,6 +14,7 @@ interface UseShapesArgs {
   saveToHistory: (snapshotShapes?: SVGShape[], snapshotSelectedIds?: string[] | Set<string> | string | null) => void;
   showTextSelection: (shape: SVGShape) => void;
   refreshResizeHandles: (shape: SVGShape) => void;
+  refreshCornerHandles: (shape: SVGShape) => void;
   setEditingText: React.Dispatch<React.SetStateAction<{
     id: string;
     value: string;
@@ -46,10 +47,11 @@ export const useShapes = ({
   saveToHistory,
   showTextSelection,
   refreshResizeHandles,
+  refreshCornerHandles,
   setEditingText,
   editingText,
 }: UseShapesArgs) => {
-  const applyTransform = useCallback((shape: SVGShape) => {
+  const applyTransform = useCallback((shape: SVGShape, allShapes?: SVGShape[]) => {
     const rotation = shape.data.rotation || 0;
     const scale = shape.data.scale || 1;
     const flipX = shape.data.flipX ? -1 : 1;
@@ -57,21 +59,33 @@ export const useShapes = ({
 
     if (rotation === 0 && scale === 1 && !shape.data.flipX && !shape.data.flipY) {
       shape.element.removeAttribute('transform');
-      return;
-    }
+    } else {
+      const center = getShapeCenter(shape);
+      const transforms = [
+        `translate(${center.x} ${center.y})`,
+        rotation !== 0 ? `rotate(${rotation})` : null,
+        (scale !== 1 || flipX !== 1 || flipY !== 1) ? `scale(${scale * flipX} ${scale * flipY})` : null,
+        `translate(${-center.x} ${-center.y})`,
+      ].filter((value): value is string => Boolean(value));
 
-    const center = getShapeCenter(shape);
-    const transforms = [
-      `translate(${center.x} ${center.y})`,
-      rotation !== 0 ? `rotate(${rotation})` : null,
-      (scale !== 1 || flipX !== 1 || flipY !== 1) ? `scale(${scale * flipX} ${scale * flipY})` : null,
-      `translate(${-center.x} ${-center.y})`,
-    ].filter((value): value is string => Boolean(value));
-
-    if (transforms.length) {
-      shape.element.setAttribute('transform', transforms.join(' '));
+      if (transforms.length) {
+        shape.element.setAttribute('transform', transforms.join(' '));
+      }
     }
-  }, [getShapeCenter]);
+    
+    refreshPortsPosition(shape);
+
+    // Update connected lines immediately during transformation
+    if (shape.connections) {
+      const shapesToSearch = allShapes || shapesRef.current;
+      shape.connections.forEach(connId => {
+        const connLine = shapesToSearch.find(s => s.id === connId);
+        if (connLine) {
+          updateConnectionLine(connLine, shape.id, shapesToSearch);
+        }
+      });
+    }
+  }, [getShapeCenter, refreshPortsPosition, updateConnectionLine, shapesRef]);
 
   const updateShapePosition = useCallback((shape: SVGShape, dx: number, dy: number) => {
     const def = getDef(shape);
@@ -116,6 +130,7 @@ export const useShapes = ({
     }
     shape.data.text = safeText;
     refreshResizeHandles(shape);
+    refreshCornerHandles(shape);
     showTextSelection(shape);
     if (shape.connections) {
       shape.connections.forEach(connId => {
@@ -126,7 +141,7 @@ export const useShapes = ({
       });
     }
     saveToHistory(shapes, selectedIds);
-  }, [refreshResizeHandles, saveToHistory, selectedIds, shapes, showTextSelection, updateConnectionLine]);
+  }, [refreshResizeHandles, refreshCornerHandles, saveToHistory, selectedIds, shapes, showTextSelection, updateConnectionLine]);
 
   const commitEditingText = useCallback((apply: boolean) => {
     if (!editingText) return;

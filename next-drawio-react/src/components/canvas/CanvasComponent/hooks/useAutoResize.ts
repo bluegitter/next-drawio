@@ -35,7 +35,6 @@ export const useAutoResize = ({
       const padding = 50;
       const newWidth = Math.max(width, maxX + padding);
       const newHeight = Math.max(height, maxY + padding);
-      console.log('Canvas needs resizing to:', { newWidth, newHeight });
     }
   }, [autoResize, getShapeBounds, height, shapes, width]);
 };

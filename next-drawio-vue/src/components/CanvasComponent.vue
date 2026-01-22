@@ -128,6 +128,7 @@ const connections = useConnections({
   createSVGElement: controllerBase.geometry.createSVGElement,
   startConnection: connectionActions.startConnection,
   getConnectorHandleMouseDown: connectionActions.getConnectorHandleMouseDown,
+  getBounds: controllerBase.geometry.getBounds,
 });
 const connectorNodes = useConnectorNodes({
   shapes: state.shapes,
@@ -208,6 +209,7 @@ const shapesHelpers = useShapes({
   saveToHistory: controllerBase.historyActions.saveToHistory,
   showTextSelection: selectionUi.showTextSelection,
   refreshResizeHandles: selectionUi.refreshResizeHandles,
+  refreshCornerHandles: selectionUi.refreshCornerHandles,
   setEditingText: state.setEditingText,
   editingText: state.editingText as any,
 }) as any;
@@ -267,6 +269,7 @@ const styleActions = useShapeStyles({
   tintSvgText,
   toDataUri,
   tintDataUri,
+  updateConnectionLine: controllerBase.geometry.updateConnectionLine,
 });
 useKeyboardShortcuts({
   deleteSelected: selectionActions.deleteSelected,
@@ -334,6 +337,7 @@ const pointerMove = usePointerMove({
   updateConnectorPoints: controllerBase.geometry.updateConnectorPoints,
   updatePolylinePoints: controllerBase.geometry.updatePolylinePoints,
   refreshResizeHandles: selectionUi.refreshResizeHandles,
+  refreshCornerHandles: selectionUi.refreshCornerHandles,
   getPointerPosition: state.getPointerPosition,
   getShapeBounds: controllerBase.geometry.getShapeBounds,
   getConnectorPoints,

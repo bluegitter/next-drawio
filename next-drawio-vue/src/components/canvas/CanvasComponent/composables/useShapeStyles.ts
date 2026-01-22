@@ -16,6 +16,7 @@ type UseShapeStylesArgs = {
   tintSvgText: (svgText: string, color: string) => string;
   toDataUri: (svgText: string) => string;
   tintDataUri: (dataUri: string, color: string) => string;
+  updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
 };
 
 export const useShapeStyles = ({
@@ -33,12 +34,24 @@ export const useShapeStyles = ({
   tintSvgText,
   toDataUri,
   tintDataUri,
+  updateConnectionLine,
 }: UseShapeStylesArgs) => {
   const rotateSelected = (angle: number) => {
     updateSelectedShape((shape) => {
       shape.data.rotation = angle;
       applyTransform(shape);
     });
+    setTimeout(() => {
+      selectedIdsRef.value.forEach((id) => {
+        const shape = shapesRef.value.find((s) => s.id === id);
+        if (shape?.connections) {
+          shape.connections.forEach((connId) => {
+            const connLine = shapesRef.value.find((s) => s.id === connId);
+            if (connLine) updateConnectionLine(connLine, shape.id);
+          });
+        }
+      });
+    }, 0);
   };
 
   const rotateSelectedBy = (delta: number) => {
@@ -47,6 +60,17 @@ export const useShapeStyles = ({
       shape.data.rotation = current + delta;
       applyTransform(shape);
     });
+    setTimeout(() => {
+      selectedIdsRef.value.forEach((id) => {
+        const shape = shapesRef.value.find((s) => s.id === id);
+        if (shape?.connections) {
+          shape.connections.forEach((connId) => {
+            const connLine = shapesRef.value.find((s) => s.id === connId);
+            if (connLine) updateConnectionLine(connLine, shape.id);
+          });
+        }
+      });
+    }, 0);
   };
 
   const flipSelectedHorizontal = () => {
@@ -69,6 +93,17 @@ export const useShapeStyles = ({
       shape.data.scale = safeScale;
       applyTransform(shape);
     });
+    setTimeout(() => {
+      selectedIdsRef.value.forEach((id) => {
+        const shape = shapesRef.value.find((s) => s.id === id);
+        if (shape?.connections) {
+          shape.connections.forEach((connId) => {
+            const connLine = shapesRef.value.find((s) => s.id === connId);
+            if (connLine) updateConnectionLine(connLine, shape.id);
+          });
+        }
+      });
+    }, 0);
   };
 
   const updateLineMarkers = (shape: SVGShape) => {

@@ -1,6 +1,18 @@
 import type { Ref } from 'vue';
 import type { ShapeDefinition } from '@drawio/core';
+import { DEFAULTS } from '@drawio/core';
 import type { SVGShape } from '../types';
+
+// 安全地获取CORNER_HANDLE常量，避免未定义错误
+const CORNER_HANDLE = DEFAULTS?.CORNER_HANDLE || {
+  size: 5,
+  offset: 6,
+  fill: '#f59e0b',
+  stroke: '#d97706',
+  strokeWidth: 2,
+  rotation: 45,
+  opacity: 0.8,
+};
 
 type UseSelectionArgs = {
   svgRef: Ref<SVGSVGElement | null>;
@@ -121,6 +133,13 @@ export const useSelection = ({
     if (shape.type === 'line' || shape.type === 'connector') return;
     hideResizeHandles(shape.id);
     const bounds = getBounds(shape);
+    
+    // 获取形状的变换属性
+    const rotation = shape.data.rotation || 0;
+    const scale = shape.data.scale || 1;
+    const centerX = bounds.x + bounds.w / 2;
+    const centerY = bounds.y + bounds.h / 2;
+    
     const outline = createSVGElement('rect');
     const created: SVGElement[] = [];
     if (outline) {
@@ -134,15 +153,56 @@ export const useSelection = ({
       outline.setAttribute('stroke-dasharray', '4,4');
       outline.setAttribute('pointer-events', 'none');
       outline.setAttribute('data-resize', 'outline');
+      
+      // 应用与形状相同的变换到选择框
+      const transforms = [
+        `translate(${centerX} ${centerY})`,
+        rotation !== 0 ? `rotate(${rotation})` : null,
+        scale !== 1 ? `scale(${scale})` : null,
+        `translate(${-centerX} ${-centerY})`,
+      ].filter((value): value is string => Boolean(value));
+      
+      if (transforms.length) {
+        outline.setAttribute('transform', transforms.join(' '));
+      }
+      
       svgRef.value.appendChild(outline);
       created.push(outline);
     }
-    const points = [
+    
+    // 计算变换后的控制点位置
+    const toRadians = (degrees: number) => degrees * Math.PI / 180;
+    const rotatePoint = (x: number, y: number, cx: number, cy: number, angle: number) => {
+      const rad = toRadians(angle);
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      return {
+        x: (x - cx) * cos - (y - cy) * sin + cx,
+        y: (x - cx) * sin + (y - cy) * cos + cy
+      };
+    };
+    
+    const scalePoint = (x: number, y: number, cx: number, cy: number, s: number) => {
+      return {
+        x: (x - cx) * s + cx,
+        y: (y - cy) * s + cy
+      };
+    };
+    
+    const basePoints = [
       { id: 'nw', x: bounds.x, y: bounds.y },
       { id: 'ne', x: bounds.x + bounds.w, y: bounds.y },
       { id: 'sw', x: bounds.x, y: bounds.y + bounds.h },
       { id: 'se', x: bounds.x + bounds.w, y: bounds.y + bounds.h },
     ];
+    
+    // 应用缩放和旋转变换到控制点
+    const points = basePoints.map(p => {
+      let point = scalePoint(p.x, p.y, centerX, centerY, scale);
+      point = rotatePoint(point.x, point.y, centerX, centerY, rotation);
+      return { id: p.id, x: point.x, y: point.y };
+    });
+    
     points.forEach((p) => {
       const handle = createSVGElement('rect');
       if (!handle) return;
@@ -181,22 +241,54 @@ export const useSelection = ({
     const cornerHandles = def.getCornerHandles(shape);
     const created: SVGElement[] = [];
 
+    // 获取形状的变换属性
+    const rotation = shape.data.rotation || 0;
+    const scale = shape.data.scale || 1;
+    const bounds = getBounds(shape);
+    const centerX = bounds.x + bounds.w / 2;
+    const centerY = bounds.y + bounds.h / 2;
+
+    // 计算变换后的圆角控制点位置
+    const toRadians = (degrees: number) => degrees * Math.PI / 180;
+    const rotatePoint = (x: number, y: number, cx: number, cy: number, angle: number) => {
+      const rad = toRadians(angle);
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      return {
+        x: (x - cx) * cos - (y - cy) * sin + cx,
+        y: (x - cx) * sin + (y - cy) * cos + cy
+      };
+    };
+    
+    const scalePoint = (x: number, y: number, cx: number, cy: number, s: number) => {
+      return {
+        x: (x - cx) * s + cx,
+        y: (y - cy) * s + cy
+      };
+    };
+
     cornerHandles.forEach((corner) => {
       const handle = createSVGElement('rect');
       if (!handle) return;
-      const size = 10;
-      handle.setAttribute('x', String(corner.x - size / 2));
-      handle.setAttribute('y', String(corner.y - size / 2));
+      
+      // 应用缩放和旋转变换到圆角控制点
+      let point = scalePoint(corner.x, corner.y, centerX, centerY, scale);
+      point = rotatePoint(point.x, point.y, centerX, centerY, rotation);
+      
+      const size = CORNER_HANDLE.size;
+      handle.setAttribute('x', String(point.x - size / 2));
+      handle.setAttribute('y', String(point.y - size / 2));
       handle.setAttribute('width', String(size));
       handle.setAttribute('height', String(size));
-      handle.setAttribute('fill', '#f59e0b');
-      handle.setAttribute('stroke', '#d97706');
-      handle.setAttribute('stroke-width', '2');
+      handle.setAttribute('fill', CORNER_HANDLE.fill);
+      handle.setAttribute('stroke', CORNER_HANDLE.stroke);
+      handle.setAttribute('stroke-width', String(CORNER_HANDLE.strokeWidth));
       handle.setAttribute('data-corner-handle', corner.type);
       handle.setAttribute('data-shape-id', shape.id);
       handle.setAttribute('cursor', corner.cursor);
-      handle.setAttribute('transform', `rotate(45 ${corner.x} ${corner.y})`);
-      handle.style.opacity = '0.8';
+      // 圆角handle自身的旋转也要考虑形状的旋转
+      handle.setAttribute('transform', `rotate(${CORNER_HANDLE.rotation + rotation} ${point.x} ${point.y})`);
+      handle.style.opacity = String(CORNER_HANDLE.opacity);
 
       const onCornerMouseDown = (e: MouseEvent) => {
         e.stopPropagation();
@@ -218,10 +310,71 @@ export const useSelection = ({
     cornerHandlesRef.value.set(shape.id, created);
   };
 
+  const refreshCornerHandles = (shape: SVGShape) => {
+    const handles = cornerHandlesRef.value.get(shape.id);
+    if (!handles || handles.length === 0 || shape.type !== 'roundedRect') return;
+    
+    const def = getDef(shape);
+    if (!def?.getCornerHandles) return;
+    
+    const cornerHandles = def.getCornerHandles(shape);
+    const bounds = getBounds(shape);
+    
+    // 获取形状的变换属性
+    const rotation = shape.data.rotation || 0;
+    const scale = shape.data.scale || 1;
+    const centerX = bounds.x + bounds.w / 2;
+    const centerY = bounds.y + bounds.h / 2;
+    
+    // 计算变换后的圆角控制点位置
+    const toRadians = (degrees: number) => degrees * Math.PI / 180;
+    const rotatePoint = (x: number, y: number, cx: number, cy: number, angle: number) => {
+      const rad = toRadians(angle);
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      return {
+        x: (x - cx) * cos - (y - cy) * sin + cx,
+        y: (x - cx) * sin + (y - cy) * cos + cy
+      };
+    };
+    
+    const scalePoint = (x: number, y: number, cx: number, cy: number, s: number) => {
+      return {
+        x: (x - cx) * s + cx,
+        y: (y - cy) * s + cy
+      };
+    };
+
+    handles.forEach((handle, index) => {
+      const corner = cornerHandles[index];
+      if (!corner) return;
+      
+      // 应用缩放和旋转变换到圆角控制点
+      let point = scalePoint(corner.x, corner.y, centerX, centerY, scale);
+      point = rotatePoint(point.x, point.y, centerX, centerY, rotation);
+      
+      const size = CORNER_HANDLE.size;
+      handle.setAttribute('x', String(point.x - size / 2));
+      handle.setAttribute('y', String(point.y - size / 2));
+      // 圆角handle自身的旋转也要考虑形状的旋转
+      handle.setAttribute('transform', `rotate(${CORNER_HANDLE.rotation + rotation} ${point.x} ${point.y})`);
+    });
+  };
+
   const refreshResizeHandles = (shape: SVGShape) => {
     const handles = resizeHandlesRef.value.get(shape.id);
     if (!handles || handles.length === 0) return;
     const bounds = getBounds(shape);
+    
+    const rotation = shape.data.rotation || 0;
+    const scale = shape.data.scale || 1;
+    const centerX = bounds.x + bounds.w / 2;
+    const centerY = bounds.y + bounds.h / 2;
+    
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    
     handles.forEach((h) => {
       const id = h.getAttribute('data-resize');
       if (id === 'outline') {
@@ -229,8 +382,22 @@ export const useSelection = ({
         h.setAttribute('y', String(bounds.y));
         h.setAttribute('width', String(bounds.w));
         h.setAttribute('height', String(bounds.h));
+        
+        const transforms = [
+          `translate(${centerX} ${centerY})`,
+          rotation !== 0 ? `rotate(${rotation})` : null,
+          scale !== 1 ? `scale(${scale})` : null,
+          `translate(${-centerX} ${-centerY})`,
+        ].filter((value): value is string => Boolean(value));
+        
+        if (transforms.length) {
+          h.setAttribute('transform', transforms.join(' '));
+        } else {
+          h.removeAttribute('transform');
+        }
         return;
       }
+      
       const pos = {
         nw: { x: bounds.x, y: bounds.y },
         ne: { x: bounds.x + bounds.w, y: bounds.y },
@@ -240,8 +407,18 @@ export const useSelection = ({
       const key = id as 'nw' | 'ne' | 'sw' | 'se' | null;
       if (!key) return;
       const p = pos[key];
-      h.setAttribute('x', String(p.x - 6));
-      h.setAttribute('y', String(p.y - 6));
+      
+      const dx = p.x - centerX;
+      const dy = p.y - centerY;
+      const scaledX = dx * scale;
+      const scaledY = dy * scale;
+      const rx = scaledX * cos - scaledY * sin;
+      const ry = scaledX * sin + scaledY * cos;
+      const transformedX = centerX + rx;
+      const transformedY = centerY + ry;
+      
+      h.setAttribute('x', String(transformedX - 6));
+      h.setAttribute('y', String(transformedY - 6));
     });
   };
 
@@ -280,6 +457,7 @@ export const useSelection = ({
     beginEditText,
     showResizeHandles,
     refreshResizeHandles,
+    refreshCornerHandles,
     showCornerHandles,
     hideResizeHandles,
     hideCornerHandles,

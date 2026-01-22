@@ -16,6 +16,7 @@ interface HandleResizeArgs {
   setDragStart: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
   updateShapeSize: (shape: SVGShape, handle: string, dx: number, dy: number) => void;
   refreshResizeHandles: (shape: SVGShape) => void;
+  refreshCornerHandles: (shape: SVGShape) => void;
   showCornerHandles: (shape: SVGShape) => void;
   updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
 }
@@ -35,6 +36,7 @@ export const handleResizeMove = ({
   setDragStart,
   updateShapeSize,
   refreshResizeHandles,
+  refreshCornerHandles,
   showCornerHandles,
   updateConnectionLine,
 }: HandleResizeArgs) => {
@@ -85,6 +87,7 @@ export const handleResizeMove = ({
     if (shape) {
       updateShapeSize(shape, resizeHandle, dx, dy);
       refreshResizeHandles(shape);
+      refreshCornerHandles(shape);
 
       if (shape.type === 'roundedRect') {
         showCornerHandles(shape);
