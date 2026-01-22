@@ -1,0 +1,53 @@
+{
+  "name": "@drawio/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "type-check": "tsc -p tsconfig.build.json --noEmit",
+    "clean": "rm -rf dist",
+    "prebuild": "pnpm run clean"
+  },
+  "dependencies": {
+    "fabric": "^5.5.2"
+  },
+  "devDependencies": {
+    "@types/fabric": "^5.3.10",
+    "@types/node": "^20",
+    "typescript": "^5"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/next-drawio",
+    "directory": "packages/next-drawio-core"
+  },
+  "keywords": [
+    "drawio",
+    "canvas",
+    "diagram",
+    "graphics",
+    "fabric"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "description": "Framework-agnostic core library for diagram editing and canvas manipulation"
+}

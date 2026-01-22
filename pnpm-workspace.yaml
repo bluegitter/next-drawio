@@ -1,0 +1,4 @@
+packages:
+  - 'next-drawio-core'
+  - 'next-drawio-react'
+  - 'next-drawio-vue'

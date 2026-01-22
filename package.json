@@ -1,0 +1,37 @@
+{
+  "name": "next-drawio-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next-DrawIO Monorepo - Framework-agnostic diagram editing library",
+  "scripts": {
+    "install:all": "pnpm install",
+    "build": "pnpm -r --filter './next-drawio-core' build && pnpm -r --filter './next-drawio-react' build && pnpm -r --filter './next-drawio-vue' build",
+    "build:core": "pnpm --filter './next-drawio-core' build",
+    "build:react": "pnpm --filter './next-drawio-react' build",
+    "build:vue": "pnpm --filter './next-drawio-vue' build",
+    "dev:react": "pnpm --filter './next-drawio-react' dev",
+    "dev:vue": "pnpm --filter './next-drawio-vue' dev",
+    "type-check": "pnpm -r type-check",
+    "clean": "pnpm -r clean",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  },
+  "keywords": [
+    "drawio",
+    "diagram",
+    "canvas",
+    "monorepo",
+    "react",
+    "vue"
+  ],
+  "author": "VectorDraw Pro Team",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

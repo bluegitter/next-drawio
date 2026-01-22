@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue 测试页面</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h1>{{ message }}</h1>
+        <p>Vue 应用正在运行</p>
+        <button @click="count++">点击次数: {{ count }}</button>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue;
+        
+        createApp({
+            setup() {
+                const message = ref('Vue 测试页面');
+                const count = ref(0);
+                
+                return {
+                    message,
+                    count
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

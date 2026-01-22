@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add:*)",
+      "Bash(npm run storybook:*)",
+      "Bash(npm run dev)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(pnpm run build:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx tsc:*)",
+      "Bash(cat:*)",
+      "Bash(npm run lint:*)",
+      "Bash(find:*)",
+      "Bash(sed:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

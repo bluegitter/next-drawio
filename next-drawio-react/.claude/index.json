@@ -1,0 +1,266 @@
+{
+  "timestamp": "2025-12-03T13:36:39+08:00",
+  "project": {
+    "name": "next-drawio",
+    "version": "0.1.0",
+    "type": "Next.js Application"
+  },
+  "modules": [
+    {
+      "path": "/",
+      "type": "root",
+      "description": "项目根目录，包含配置文件和文档",
+      "entryFiles": [
+        "README.md",
+        "package.json",
+        "next.config.ts",
+        "CLAUDE.md"
+      ],
+      "tests": false,
+      "coverage": {
+        "files_scanned": 6,
+        "files_total": 8,
+        "percentage": 75
+      }
+    },
+    {
+      "path": "app",
+      "type": "Next.js App Router",
+      "description": "Next.js 16 应用路由和布局文件",
+      "entryFiles": [
+        "layout.tsx",
+        "page.tsx",
+        "globals.css"
+      ],
+      "tests": false,
+      "coverage": {
+        "files_scanned": 3,
+        "files_total": 4,
+        "percentage": 75
+      }
+    },
+    {
+      "path": "src",
+      "type": "Source Code",
+      "description": "项目源代码目录",
+      "entryFiles": [
+        "components/CanvasProvider.tsx",
+        "components/InteractiveCanvasComponent.tsx",
+        "types/index.ts",
+        "constants/index.ts"
+      ],
+      "tests": true,
+      "coverage": {
+        "files_scanned": 35,
+        "files_total": 40,
+        "percentage": 87
+      }
+    },
+    {
+      "path": "src/components",
+      "type": "React Components",
+      "description": "React 组件模块，包含画布和 UI 组件",
+      "entryFiles": [
+        "CanvasProvider.tsx",
+        "InteractiveCanvasComponent.tsx",
+        "Toolbar.tsx",
+        "PropertyPanel.tsx",
+        "ui/Button.tsx",
+        "ui/Input.tsx"
+      ],
+      "tests": true,
+      "coverage": {
+        "files_scanned": 15,
+        "files_total": 18,
+        "percentage": 83
+      }
+    },
+    {
+      "path": "src/components/ui",
+      "type": "UI Components",
+      "description": "通用 UI 组件库",
+      "entryFiles": [
+        "Button.tsx",
+        "Input.tsx",
+        "utils.ts",
+        "index.ts"
+      ],
+      "tests": true,
+      "coverage": {
+        "files_scanned": 4,
+        "files_total": 4,
+        "percentage": 100
+      }
+    },
+    {
+      "path": "src/types",
+      "type": "TypeScript Types",
+      "description": "TypeScript 类型定义模块",
+      "entryFiles": [
+        "index.ts",
+        "common.ts",
+        "canvas.ts",
+        "object.ts",
+        "tool.ts"
+      ],
+      "tests": false,
+      "coverage": {
+        "files_scanned": 11,
+        "files_total": 11,
+        "percentage": 100
+      }
+    },
+    {
+      "path": "src/constants",
+      "type": "Constants",
+      "description": "项目常量定义",
+      "entryFiles": [
+        "index.ts",
+        "canvas.ts",
+        "tools.ts",
+        "colors.ts",
+        "defaults.ts"
+      ],
+      "tests": false,
+      "coverage": {
+        "files_scanned": 8,
+        "files_total": 8,
+        "percentage": 100
+      }
+    },
+    {
+      "path": "public",
+      "type": "Static Assets",
+      "description": "静态资源文件",
+      "entryFiles": [
+        "next.svg",
+        "vercel.svg",
+        "globe.svg"
+      ],
+      "tests": false,
+      "coverage": {
+        "files_scanned": 4,
+        "files_total": 6,
+        "percentage": 66
+      }
+    }
+  ],
+  "statistics": {
+    "total_files": {
+      "scanned": 67,
+      "total": 89,
+      "percentage": 75
+    },
+    "file_types": {
+      "typescript": 35,
+      "typescript_react": 20,
+      "javascript": 8,
+      "json": 6,
+      "css": 4,
+      "svg": 6,
+      "md": 10
+    },
+    "directories": {
+      "scanned": 8,
+      "total": 10,
+      "percentage": 80
+    }
+  },
+  "coverage_gaps": [
+    {
+      "module": "public",
+      "missing": ["favicon.ico"],
+      "reason": "Binary files ignored"
+    },
+    {
+      "module": "app",
+      "missing": ["favicon.ico"],
+      "reason": "Binary files ignored"
+    },
+    {
+      "module": "root",
+      "missing": [".gitignore", "pnpm-lock.yaml"],
+      "reason": "Configuration and lock files"
+    }
+  ],
+  "test_coverage": {
+    "test_files": 4,
+    "test_framework": "Jest",
+    "storybook": true,
+    "configuration_files": [
+      "jest.config.js",
+      "jest.setup.js"
+    ]
+  },
+  "quality_tools": {
+    "eslint": true,
+    "typescript": true,
+    "prettier": true,
+    "storybook": true
+  },
+  "architecture": {
+    "pattern": "Next.js App Router + TypeScript",
+    "state_management": "Zustand + Immer",
+    "ui_library": "Radix UI + Tailwind CSS",
+    "graphics_engine": "Fabric.js + SVG",
+    "testing": "Jest + Storybook"
+  },
+  "scan_metadata": {
+    "scan_date": "2025-12-03",
+    "scan_time": "13:36:39",
+    "scanner": "Adaptive Architect",
+    "truncated": false,
+    "scan_duration": "medium",
+    "depth": "selective"
+  },
+  "recommendations": {
+    "next_actions": [
+      "Implement missing unit tests for core components",
+      "Add integration tests for canvas interactions",
+      "Complete Storybook documentation for all components",
+      "Set up CI/CD pipeline for automated testing"
+    ],
+    "priority_modules": [
+      "src/components/InteractiveCanvasComponent.tsx",
+      "src/components/CanvasProvider.tsx",
+      "src/types/canvas.ts",
+      "src/constants/tools.ts"
+    ],
+    "documentation_updates": [
+      "Add API documentation for CanvasProvider",
+      "Create component usage examples",
+      "Document tool integration patterns"
+    ]
+  },
+  "dependencies": {
+    "core": [
+      "next@16.0.6",
+      "react@19.2.0",
+      "react-dom@19.2.0",
+      "typescript@5"
+    ],
+    "ui": [
+      "@radix-ui/react-context-menu",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-select",
+      "@radix-ui/react-slider",
+      "@radix-ui/react-tooltip",
+      "tailwindcss@4",
+      "lucide-react"
+    ],
+    "graphics": [
+      "fabric@5.5.2"
+    ],
+    "state": [
+      "zustand@5.0.1",
+      "immer@10.1.1"
+    ],
+    "development": [
+      "eslint@9",
+      "eslint-config-next@16.0.6",
+      "jest@29.7.0",
+      "storybook@8.3.5"
+    ]
+  }
+}
