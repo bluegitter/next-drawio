@@ -12,7 +12,6 @@ const nextConfig: NextConfig = {
   
   experimental: {
     optimizePackageImports: [
-      'fabric',
       'zustand',
       'lucide-react',
       '@radix-ui/react-dialog',
