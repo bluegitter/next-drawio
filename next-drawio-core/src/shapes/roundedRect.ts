@@ -1,5 +1,4 @@
 import { ShapeDefinition, ShapeContext, ShapeBounds, Point } from './types';
-import { DEFAULTS } from '../constants/defaults';
 
 export const roundedRectShape: ShapeDefinition = {
   type: 'roundedRect',
@@ -145,15 +144,29 @@ export const roundedRectShape: ShapeDefinition = {
     ];
   },
   getCornerHandles: (shape) => {
-    const { x = 0, y = 0, width = 0 } = shape.data;
-    const offset = DEFAULTS.CORNER_HANDLE.offset;
+    const { x = 0, y = 0, width = 0, height = 0, cornerRadius = 0 } = shape.data;
+    
+    // 根据圆角大小动态计算handle位置
+    const offset = height / 8;  // 基础偏移量
+    const maxRadius = Math.min(width, height) / 2;
+    const radiusRatio = cornerRadius / maxRadius;  // 圆角比例 (0-1)
+    
+    // 蓝色外框的右上角
+    const rightTopX = x + width;
+    const rightTopY = y;
+    
+    // handle位置根据圆角大小调整：
+    // - 圆角为0时，handle在最右边 (rightTopX)
+    // - 圆角越大，handle越靠左
+    const handleX = rightTopX - (radiusRatio * height / 3);  // 圆角为0时，handleX = rightTopX
+    const handleY = rightTopY + offset;
+    
     return [
       {
         id: `${shape.id}-corner-top`,
         type: 'corner-top',
-        x: x + width - offset,
-        // 固定在顶部，只允许左右拖拽调整圆角
-        y: y + offset,
+        x: handleX,
+        y: handleY,
         visible: true,
         cursor: 'ew-resize',
       },

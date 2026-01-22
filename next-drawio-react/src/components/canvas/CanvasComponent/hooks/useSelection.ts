@@ -11,7 +11,6 @@ const CORNER_HANDLE = DEFAULTS?.CORNER_HANDLE || {
   fill: '#f59e0b',
   stroke: '#d97706',
   strokeWidth: 2,
-  rotation: 45,
   opacity: 0.8,
 };
 
@@ -280,8 +279,6 @@ export const useSelection = ({
       handle.setAttribute('data-corner-handle', corner.type);
       handle.setAttribute('data-shape-id', shape.id);
       handle.setAttribute('cursor', corner.cursor);
-      // 圆角handle自身的旋转也要考虑形状的旋转
-      handle.setAttribute('transform', `rotate(${CORNER_HANDLE.rotation + rotation} ${point.x} ${point.y})`);
       handle.style.opacity = String(CORNER_HANDLE.opacity);
 
       const onCornerMouseDown = (e: MouseEvent) => {
@@ -349,8 +346,6 @@ export const useSelection = ({
       const size = CORNER_HANDLE.size;
       handle.setAttribute('x', String(point.x - size / 2));
       handle.setAttribute('y', String(point.y - size / 2));
-      // 圆角handle自身的旋转也要考虑形状的旋转
-      handle.setAttribute('transform', `rotate(${CORNER_HANDLE.rotation + rotation} ${point.x} ${point.y})`);
     });
   }, [getBounds, cornerHandlesRef, getDef]);
 

@@ -1,6 +1,16 @@
 import type React from 'react';
 import type { SVGShape } from '../types';
 
+// 圆角handle常量（与useSelection中的定义保持一致）
+const CORNER_HANDLE = {
+  size: 5,
+  offset: 6,
+  fill: '#f59e0b',
+  stroke: '#d97706',
+  strokeWidth: 2,
+  opacity: 0.8,
+};
+
 interface HandleResizeArgs {
   shapes: SVGShape[];
   dx: number;
@@ -43,21 +53,29 @@ export const handleResizeMove = ({
   if (draggingCornerHandle) {
     const shape = shapes.find(s => s.id === draggingCornerHandle.shapeId);
     if (shape && shape.type === 'roundedRect') {
-      const maxRadius = Math.min((shape.data.width || 0), (shape.data.height || 0)) / 2;
+      const { x: shapeX = 0, y: shapeY = 0, width: shapeWidth = 0, height: shapeHeight = 0 } = shape.data;
+      const maxRadius = Math.min(shapeWidth, shapeHeight) / 2;
       const currentCornerRadius = shape.data.cornerRadius || 0;
-      const newCornerRadius = Math.max(0, Math.min(maxRadius, currentCornerRadius + dx));
-      const currentX = x;
+      // 反转逻辑：向左移动(dx为负)增大圆角，向右移动(dx为正)减小圆角
+      const newCornerRadius = Math.max(0, Math.min(maxRadius, currentCornerRadius - dx));
 
       shape.element.setAttribute('rx', String(newCornerRadius));
       shape.element.setAttribute('ry', String(newCornerRadius));
+
+      // 计算新的handle位置（基于新的圆角大小）
+      const offset = shapeHeight / 8;
+      const radiusRatio = newCornerRadius / maxRadius;  // 新的圆角比例
+      const rightTopX = shapeX + shapeWidth;
+      const rightTopY = shapeY;
+      const handleX = rightTopX - (radiusRatio * shapeHeight / 3);  // 圆角为0时，handle在最右边
+      const handleY = rightTopY + offset;
 
       const handles = cornerHandlesRef.current.get(shape.id);
       const handleEl = handles?.find(h => h.getAttribute('data-corner-handle') === draggingCornerHandle.handleType);
       if (handleEl) {
         const size = Number(handleEl.getAttribute('width')) || 10;
-        const currentY = Number(handleEl.getAttribute('y')) || 0;
-        handleEl.setAttribute('x', String(currentX - size / 2));
-        handleEl.setAttribute('y', String(currentY));
+        handleEl.setAttribute('x', String(handleX - size / 2));
+        handleEl.setAttribute('y', String(handleY - size / 2));
       }
 
       const updatedShape = {
@@ -77,9 +95,6 @@ export const handleResizeMove = ({
       });
 
       setDragStart({ x, y });
-      setTimeout(() => {
-        showCornerHandles(updatedShape);
-      }, 0);
       return true;
     }
   } else if (selectedShape && resizeHandle) {
