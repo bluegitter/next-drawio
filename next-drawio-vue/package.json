@@ -12,7 +12,6 @@
   "dependencies": {
     "@drawio/core": "workspace:*",
     "clsx": "^2.1.1",
-    "fabric": "^5.5.2",
     "file-saver": "^2.0.5",
     "hotkeys-js": "^3.13.7",
     "immer": "^10.1.1",
@@ -23,7 +22,6 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
-    "@types/fabric": "^5.3.10",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^20.0.0",
     "@vitejs/plugin-vue": "^5.1.0",

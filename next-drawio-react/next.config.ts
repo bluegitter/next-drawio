@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   // 简化 Turbopack 配置
   turbopack: {
     resolveAlias: {
-      '@drawio/core': './packages/drawio-core/src',
+      '@drawio/core': '../next-drawio-core/src',
     },
   },
 
@@ -72,22 +72,12 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Webpack 配置（保留以备不时之需）
-  webpack: (config, { isServer }) => {
-    // 处理 Fabric.js 的某些模块
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        path: false,
-        os: false,
-      };
-    }
-
+  // Webpack 配置
+  webpack: (config) => {
     // 添加 @drawio/core 解析别名
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@drawio/core': require('path').resolve(__dirname, './packages/drawio-core/src'),
+      '@drawio/core': require('path').resolve(__dirname, '../next-drawio-core/src'),
     };
 
     return config;

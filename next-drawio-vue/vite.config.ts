@@ -37,7 +37,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
-      '@drawio/core': path.resolve(__dirname, '../next-drawio-react/packages/drawio-core/src'),
+      '@drawio/core': path.resolve(__dirname, '../next-drawio-core/src'),
     },
   },
   define: {

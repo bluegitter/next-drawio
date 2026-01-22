@@ -29,7 +29,7 @@
       "@/constants/*": ["./src/constants/*"],
       "@/services/*": ["./src/services/*"],
       "@/styles/*": ["./src/styles/*"],
-      "@drawio/core": ["./packages/drawio-core/src"]
+      "@drawio/core": ["../next-drawio-core/src"]
     }
   },
   "include": [

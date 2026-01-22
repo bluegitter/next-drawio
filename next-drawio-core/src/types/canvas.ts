@@ -1,5 +1,4 @@
 import { Point, Size, Transform, RenderContext, PerformanceMetrics } from './common';
-import type { fabric } from 'fabric';
 
 // 画布对象类型
 export type ObjectType = 
@@ -192,19 +191,16 @@ export interface ShadowStyle {
   offsetY: number;
 }
 
-// 画布上下文（Fabric 版）
+// 画布上下文（SVG 版本）
 export type CanvasRefLike<T> = { current: T | null } | { value: T | null };
 
 export interface CanvasContextType {
-  canvas: fabric.Canvas | null;
-  canvasRef: CanvasRefLike<HTMLCanvasElement>;
+  canvas: SVGSVGElement | null;
+  canvasRef: CanvasRefLike<SVGSVGElement>;
   isLoading: boolean;
   error: Error | null;
-  addObject: (object: fabric.Object) => void;
-  removeObject: (object: fabric.Object) => void;
+  // SVG 画布操作方法
   clearCanvas: () => void;
-  getSelectedObjects: () => fabric.Object[];
-  setActiveTool: (tool: 'select' | 'draw' | 'erase' | 'pan') => void;
   setZoom: (zoom: number) => void;
   centerCanvas: () => void;
   exportCanvas: (format: 'png' | 'jpg' | 'svg') => string;

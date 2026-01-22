@@ -1,5 +1,4 @@
 import type { Ref } from 'vue';
-import type { fabric } from 'fabric';
 import { Point, Size, Transform, PerformanceMetrics } from './common';
 
 export type ObjectType =
@@ -157,15 +156,11 @@ export interface ShadowStyle {
 }
 
 export interface CanvasContextType {
-  canvas: fabric.Canvas | null;
-  canvasRef: Ref<HTMLCanvasElement | null>;
+  canvas: SVGSVGElement | null;
+  canvasRef: Ref<SVGSVGElement | null>;
   isLoading: boolean;
   error: Error | null;
-  addObject: (object: fabric.Object) => void;
-  removeObject: (object: fabric.Object) => void;
   clearCanvas: () => void;
-  getSelectedObjects: () => fabric.Object[];
-  setActiveTool: (tool: 'select' | 'draw' | 'erase' | 'pan') => void;
   setZoom: (zoom: number) => void;
   centerCanvas: () => void;
   exportCanvas: (format: 'png' | 'jpg' | 'svg') => string;

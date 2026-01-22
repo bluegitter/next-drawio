@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm type-check)",
+      "Bash(pnpm dev)",
+      "Bash(find:*)",
+      "Bash(pnpm build:core:*)",
+      "Bash(pnpm build:vue:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

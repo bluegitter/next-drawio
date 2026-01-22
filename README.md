@@ -101,7 +101,7 @@ pnpm lint
 
 ## 技术栈
 
-- **核心库**: TypeScript + Fabric.js
+- **核心库**: TypeScript
 - **React**: Next.js 16, React 19, Zustand
 - **Vue**: Vue 3, Vite
 - **样式**: Tailwind CSS 4

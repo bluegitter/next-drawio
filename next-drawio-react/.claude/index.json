@@ -169,17 +169,24 @@
   "coverage_gaps": [
     {
       "module": "public",
-      "missing": ["favicon.ico"],
+      "missing": [
+        "favicon.ico"
+      ],
       "reason": "Binary files ignored"
     },
     {
       "module": "app",
-      "missing": ["favicon.ico"],
+      "missing": [
+        "favicon.ico"
+      ],
       "reason": "Binary files ignored"
     },
     {
       "module": "root",
-      "missing": [".gitignore", "pnpm-lock.yaml"],
+      "missing": [
+        ".gitignore",
+        "pnpm-lock.yaml"
+      ],
       "reason": "Configuration and lock files"
     }
   ],
@@ -202,7 +209,7 @@
     "pattern": "Next.js App Router + TypeScript",
     "state_management": "Zustand + Immer",
     "ui_library": "Radix UI + Tailwind CSS",
-    "graphics_engine": "Fabric.js + SVG",
+    "graphics_engine": "SVG",
     "testing": "Jest + Storybook"
   },
   "scan_metadata": {
@@ -248,9 +255,6 @@
       "@radix-ui/react-tooltip",
       "tailwindcss@4",
       "lucide-react"
-    ],
-    "graphics": [
-      "fabric@5.5.2"
     ],
     "state": [
       "zustand@5.0.1",

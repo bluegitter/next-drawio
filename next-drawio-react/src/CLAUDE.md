@@ -39,7 +39,6 @@ src/
 - **Tailwind CSS**: 样式框架
 
 ### 主要依赖
-- **Fabric.js 5.5.2**: Canvas 图形库
 - **Zustand 5.0.1**: 状态管理
 - **Radix UI**: UI 组件库
 - **Lucide React**: 图标库

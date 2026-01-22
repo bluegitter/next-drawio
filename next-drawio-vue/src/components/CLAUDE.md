@@ -55,7 +55,6 @@ export interface CanvasComponentRef {
 ## 关键依赖与配置
 
 ### 技术依赖
-- **Fabric.js 5.5.2**: Canvas 图形操作库
 - **React 19.2.0**: 组件框架
 - **Radix UI**: 基础 UI 组件
 - **Tailwind CSS**: 样式框架
