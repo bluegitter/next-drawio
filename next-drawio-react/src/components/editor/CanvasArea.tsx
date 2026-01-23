@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import CanvasComponent from '@/components/CanvasComponent';
-import type { CanvasComponentRef } from '@/components/canvas/CanvasComponent/types';
+import type { CanvasComponentRef } from "@/components/canvas/canvas-types";
 import { useSpacePan } from '@/components/editor/hooks/useSpacePan';
 
 type CanvasAreaProps = {

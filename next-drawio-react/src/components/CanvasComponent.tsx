@@ -2,13 +2,13 @@
 
 import React, { useCallback, forwardRef } from 'react';
 import { updateCylinderPath, updateCloudPath } from '@drawio/core';
-import type { CanvasComponentProps, CanvasComponentRef } from './canvas/CanvasComponent/types';
-import { useCanvasState } from './canvas/CanvasComponent/hooks/useCanvasState';
+import type { CanvasComponentProps, CanvasComponentRef } from "@/components/canvas/canvas-types";
+import { useCanvasState } from "@/components/canvas/hooks/useCanvasState";
 import { getConnectorPoints, parsePoints, pointToPolylineDistance } from '@drawio/core';
-import { useCanvasController } from './canvas/CanvasComponent/hooks/useCanvasController';
-import { useCanvasInteractions } from './canvas/CanvasComponent/hooks/useCanvasInteractions';
-import { useCanvasLifecycle } from './canvas/CanvasComponent/hooks/useCanvasLifecycle';
-import CanvasComponentView from './canvas/CanvasComponent/CanvasComponentView';
+import { useCanvasController } from "@/components/canvas/hooks/useCanvasController";
+import { useCanvasInteractions } from "@/components/canvas/hooks/useCanvasInteractions";
+import { useCanvasLifecycle } from "@/components/canvas/hooks/useCanvasLifecycle";
+import CanvasComponentView from "@/components/canvas/CanvasComponentView";
 
 export type { CanvasComponentRef };
 export const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentProps>((props, ref) => {

@@ -1,5 +1,5 @@
 /**
- * Vue 适配层 - 将核心状态管理器适配为 Vue composables
+ * Vue 适配层 - 将核心状态管理器适配为 Vue hooks
  */
 import { computed, ref } from 'vue';
 import { CanvasStateManager, CanvasStateConfig } from '@drawio/core';

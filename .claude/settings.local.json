@@ -18,7 +18,9 @@
       "Bash(for file in *.ts)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(head -10 \"$file\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(sed:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

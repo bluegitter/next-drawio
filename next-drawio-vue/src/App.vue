@@ -52,7 +52,7 @@
       :on-flip-vertical="handleFlipVertical"
     />
 
-    <div class="flex flex-1 overflow-hidden min-h-0">
+    <div class="flex flex-1 min-h-0 overflow-hidden">
       <LeftSidebar
         :on-tool-select="handleToolChange"
         :on-add-shape-at="(type) => canvasMethodsRef?.addShapeAt?.(type, { x: 120, y: 120 })"
@@ -82,8 +82,8 @@
         :on-clipboard-change="handleClipboardChange"
       />
 
-      <div class="w-80 bg-white border-l border-gray-200 flex flex-col min-h-0">
-        <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      <div class="flex flex-col min-h-0 bg-white border-l border-gray-200 w-80">
+        <div class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
           <PropertyPanel
             :selected-shape="selectedShape"
             :on-fill-change="handleFillChange"
@@ -131,7 +131,7 @@
 
 <script setup lang="ts">
   import { computed, nextTick, ref, watch, watchEffect } from 'vue';
-import type { CanvasComponentRef } from '@/components/canvas/CanvasComponent/types';
+import type { CanvasComponentRef } from "./components/canvas/canvas-types";
 import type { ToolType } from '@drawio/core';
 import TopMenuBar from '@/components/editor/TopMenuBar.vue';
 import Toolbar from '@/components/editor/Toolbar.vue';

@@ -51,7 +51,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import CanvasComponent from '@/components/CanvasComponent.vue';
-import type { CanvasComponentRef } from '@/components/canvas/CanvasComponent/types';
+import type { CanvasComponentRef } from "../canvas/canvas-types";
 import { useSpacePan } from '@/components/editor/hooks/useSpacePan';
 
 const props = defineProps<{

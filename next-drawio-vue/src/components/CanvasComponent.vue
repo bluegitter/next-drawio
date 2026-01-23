@@ -31,16 +31,16 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, toRefs, watch, watchEffect } from 'vue';
-import CanvasComponentView from '@/components/canvas/CanvasComponent/CanvasComponentView.vue';
-import type { CanvasComponentProps, CanvasComponentRef } from '@/components/canvas/CanvasComponent/types';
-import { useCanvasState } from '@/components/canvas/CanvasComponent/composables/useCanvasState';
-import { useCanvasControllerBase } from '@/components/canvas/CanvasComponent/composables/useCanvasControllerBase';
+import CanvasComponentView from "./canvas/CanvasComponentView.vue";
+import type { CanvasComponentProps, CanvasComponentRef } from './canvas/canvas-types';
+import { useCanvasState } from './canvas/hooks/useCanvasState';
+import { useCanvasControllerBase } from './canvas/hooks/useCanvasControllerBase';
 import { useShapeCreation, useShapes, useSelection, useSelectionActions, useCanvasMouse, useConnectionActions, useConnections, useConnectorNodes, useImportExport, useClipboard, useLayering, useShapeStyles, useCanvasGeometry, useHistory, usePointerMove, useShapeMouseDown } from '@drawio/core';
-import { usePointerUp } from '@/components/canvas/CanvasComponent/composables/usePointerUp';
-import { useShapeEventBindings } from '@/components/canvas/CanvasComponent/composables/useShapeEventBindings';
-import { useKeyboardShortcuts } from '@/components/canvas/CanvasComponent/composables/useKeyboardShortcuts';
-import { useBoundsChange } from '@/components/canvas/CanvasComponent/composables/useBoundsChange';
-import { useAutoResize } from '@/components/canvas/CanvasComponent/composables/useAutoResize';
+import { usePointerUp } from './canvas/hooks/usePointerUp';
+import { useShapeEventBindings } from './canvas/hooks/useShapeEventBindings';
+import { useKeyboardShortcuts } from './canvas/hooks/useKeyboardShortcuts';
+import { useBoundsChange } from './canvas/hooks/useBoundsChange';
+import { useAutoResize } from './canvas/hooks/useAutoResize';
 import { getConnectorPoints, parsePoints, pointToPolylineDistance, projectPointToSegment } from '@drawio/core';
 import { decodeDataUri, tintDataUri, tintSvgText, toDataUri } from '@drawio/core';
 import { updateCloudPath, updateCylinderPath } from '@drawio/core';

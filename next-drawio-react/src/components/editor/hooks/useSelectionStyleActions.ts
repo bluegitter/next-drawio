@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { MutableRefObject } from 'react';
-import type { CanvasComponentRef } from '@/components/canvas/CanvasComponent/types';
+import type { CanvasComponentRef } from "@/components/canvas/canvas-types";
 
 type UseSelectionStyleActionsArgs = {
   canvasMethodsRef: MutableRefObject<CanvasComponentRef | null>;
