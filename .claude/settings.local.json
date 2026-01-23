@@ -12,7 +12,13 @@
       "Bash(npx tsx:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run build:*)",
-      "Bash(npx vue-tsc:*)"
+      "Bash(npx vue-tsc:*)",
+      "Bash(rm:*)",
+      "Bash(git checkout:*)",
+      "Bash(for file in *.ts)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(head -10 \"$file\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
