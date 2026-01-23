@@ -1,7 +1,7 @@
 import type { ComputedRef, Ref } from 'vue';
 import { computed, ref, shallowRef, watch, watchEffect } from 'vue';
 import type { CanvasComponentProps, CanvasComponentRef, HistoryState, SVGShape } from '../types';
-import { createCanvasState } from '@drawio/core';
+import { createCanvasState, useCanvasState as useCanvasStateCore } from '@drawio/core';
 
 type EditingText = {
   id: string;
@@ -148,31 +148,128 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
   const draggingCornerHandle = ref<DraggingCornerHandle>(coreState.value.draggingCornerHandle);
   const lastBoundsRef = shallowRef<{ minX: number; minY: number; maxX: number; maxY: number } | null>(null);
 
+  const setShapesState = (updater: (prev: SVGShape[]) => SVGShape[]) => {
+    shapes.value = updater(shapes.value);
+  };
+  const setSelectedIdsState = (updater: (prev: Set<string>) => Set<string>) => {
+    selectedIds.value = updater(selectedIds.value);
+  };
+  const setHistoryState = (updater: (prev: HistoryState[]) => HistoryState[]) => {
+    history.value = updater(history.value);
+  };
+  const setHistoryIndexState = (updater: (prev: number) => number) => {
+    historyIndex.value = updater(historyIndex.value);
+  };
+  const setZoomState = (updater: (prev: number) => number) => {
+    zoom.value = updater(zoom.value);
+  };
+  const setIsDraggingState = (updater: (prev: boolean) => boolean) => {
+    isDragging.value = updater(isDragging.value);
+  };
+  const setIsResizingState = (updater: (prev: boolean) => boolean) => {
+    isResizing.value = updater(isResizing.value);
+  };
+  const setIsSelectingBoxState = (updater: (prev: boolean) => boolean) => {
+    isSelectingBox.value = updater(isSelectingBox.value);
+  };
+  const setSelectionRectState = (updater: (prev: { x: number; y: number; w: number; h: number } | null) => { x: number; y: number; w: number; h: number } | null) => {
+    selectionRect.value = updater(selectionRect.value);
+  };
+  const setIsConnectingState = (updater: (prev: boolean) => boolean) => {
+    isConnecting.value = updater(isConnecting.value);
+  };
+  const setConnectionStartState = (updater: (prev: string | null) => string | null) => {
+    connectionStart.value = updater(connectionStart.value);
+  };
+  const setConnectionStartPortState = (updater: (prev: string | null) => string | null) => {
+    connectionStartPort.value = updater(connectionStartPort.value);
+  };
+  const setDragStartState = (updater: (prev: { x: number; y: number; viewBoxMinX?: number; viewBoxMinY?: number }) => { x: number; y: number; viewBoxMinX?: number; viewBoxMinY?: number }) => {
+    dragStart.value = updater(dragStart.value);
+  };
+  const setResizeHandleState = (updater: (prev: string | null) => string | null) => {
+    resizeHandle.value = updater(resizeHandle.value);
+  };
+  const setTempLineState = (updater: (prev: SVGElement | null) => SVGElement | null) => {
+    tempLine.value = updater(tempLine.value);
+  };
+  const setEditingTextState = (updater: (prev: EditingText) => EditingText) => {
+    editingText.value = updater(editingText.value);
+  };
+  const setDraggingHandleState = (updater: (prev: DraggingHandle) => DraggingHandle) => {
+    draggingHandle.value = updater(draggingHandle.value);
+  };
+  const setDraggingPolylinePointState = (updater: (prev: DraggingPolylinePoint) => DraggingPolylinePoint) => {
+    draggingPolylinePoint.value = updater(draggingPolylinePoint.value);
+  };
+  const setActivePortHighlightState = (updater: (prev: ActivePortHighlight) => ActivePortHighlight) => {
+    activePortHighlight.value = updater(activePortHighlight.value);
+  };
+  const setHoveredShapeIdState = (updater: (prev: string | null) => string | null) => {
+    hoveredShapeId.value = updater(hoveredShapeId.value);
+  };
+  const setDraggingCornerHandleState = (updater: (prev: DraggingCornerHandle) => DraggingCornerHandle) => {
+    draggingCornerHandle.value = updater(draggingCornerHandle.value);
+  };
+
+  const helpers = useCanvasStateCore({
+    props,
+    coreState: coreState.value,
+    refs: {
+      svgRef,
+      editingInputRef,
+      selectionOriginRef,
+      lastBoundsRef,
+      shapeIdCounter,
+      hasCalledReady,
+      methodsRef,
+      portElementsRef,
+      connectorHandleRef,
+      skipNextCanvasClickClear,
+      resizeHandlesRef,
+      cornerHandlesRef,
+      textSelectionRef,
+      handleConnectionRef,
+      lastPointerRef,
+      copyBufferRef,
+    },
+    shapesRef,
+    selectedIdsRef,
+    setters: {
+      setShapesState,
+      setSelectedIdsState,
+      setHistoryState,
+      setHistoryIndexState,
+      setZoomState,
+      setIsDraggingState,
+      setIsResizingState,
+      setIsSelectingBoxState,
+      setSelectionRectState,
+      setIsConnectingState,
+      setConnectionStartState,
+      setConnectionStartPortState,
+      setDragStartState,
+      setResizeHandleState,
+      setTempLineState,
+      setEditingTextState,
+      setDraggingHandleState,
+      setDraggingPolylinePointState,
+      setActivePortHighlightState,
+      setHoveredShapeIdState,
+      setDraggingCornerHandleState,
+    },
+  });
+
   watch(
     () => props,
-    (next) => {
-      coreState.value.setProps(next);
+    () => {
+      helpers.syncProps();
     },
     { deep: true }
   );
 
   watchEffect(() => {
-    coreState.value.svg = svgRef.value;
-    coreState.value.editingInput = editingInputRef.value;
-    coreState.value.selectionOrigin = selectionOriginRef.value;
-    coreState.value.lastBounds = lastBoundsRef.value;
-    coreState.value.shapeIdCounter = shapeIdCounter.value;
-    coreState.value.hasCalledReady = hasCalledReady.value;
-    coreState.value.methodsRef = methodsRef.value;
-    coreState.value.portElements = portElementsRef.value;
-    coreState.value.connectorHandle = connectorHandleRef.value;
-    coreState.value.skipNextCanvasClickClear = skipNextCanvasClickClear.value;
-    coreState.value.resizeHandles = resizeHandlesRef.value;
-    coreState.value.cornerHandles = cornerHandlesRef.value;
-    coreState.value.textSelection = textSelectionRef.value;
-    coreState.value.handleConnection = handleConnectionRef.value;
-    coreState.value.lastPointer = lastPointerRef.value;
-    coreState.value.copyBuffer = copyBufferRef.value;
+    helpers.syncRefs();
   });
 
   const viewBoxMinX = computed(() => {
@@ -196,7 +293,7 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
   });
 
   const getPointerPosition = (clientX: number, clientY: number) => {
-    return coreState.value.getPointerPosition(clientX, clientY);
+    return helpers.getPointerPosition(clientX, clientY);
   };
 
   const selectedShape = computed(() => {
@@ -204,35 +301,11 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
     return first.done ? null : first.value;
   });
 
-  const setSelectedShape = (id: string | null) => {
-    const next = id ? new Set([id]) : new Set<string>();
-    coreState.value.selectedIds = next;
-    selectedIdsRef.value = next;
-    selectedIds.value = next;
-  };
+  const setSelectedShape = (id: string | null) => helpers.setSelectedShape(id);
+  const setSelectedShapes = (ids: string[] | Set<string>) => helpers.setSelectedShapes(ids);
 
-  const setSelectedShapes = (ids: string[] | Set<string>) => {
-    const next = new Set(ids);
-    coreState.value.selectedIds = next;
-    selectedIdsRef.value = next;
-    selectedIds.value = next;
-  };
-
-  watch(selectedIds, (value) => {
-    selectedIdsRef.value = value;
-    coreState.value.selectedIds = value;
-  });
-
-  const setShapes = (next: SVGShape[]) => {
-    shapes.value = next;
-    shapesRef.value = next;
-    coreState.value.shapes = next;
-  };
-
-  const setHistory = (next: HistoryState[]) => {
-    history.value = next;
-    coreState.value.history = next;
-  };
+  const setShapes = (next: SVGShape[]) => helpers.setShapes(next);
+  const setHistory = (next: HistoryState[]) => helpers.setHistory(next);
 
   return {
     svgRef,
@@ -241,76 +314,37 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
     setShapes,
     selectedIds,
     selectedIdsRef: selectedIdsRef as { value: Set<string> },
-    setSelectedIds: (next) => {
-      selectedIds.value = next;
-      coreState.value.selectedIds = next;
-    },
+    setSelectedIds: (next) => helpers.setSelectedIds(next),
     selectedShape,
     setSelectedShape,
     setSelectedShapes,
     history,
     setHistory,
     historyIndex,
-    setHistoryIndex: (next) => {
-      historyIndex.value = next;
-      coreState.value.historyIndex = next;
-    },
+    setHistoryIndex: (next) => helpers.setHistoryIndex(next),
     zoom,
-    setZoom: (next) => {
-      zoom.value = next;
-      coreState.value.zoom = next;
-    },
+    setZoom: (next) => helpers.setZoom(next),
     isDragging,
-    setIsDragging: (next) => {
-      isDragging.value = next;
-      coreState.value.isDragging = next;
-    },
+    setIsDragging: (next) => helpers.setIsDragging(next),
     isResizing,
-    setIsResizing: (next) => {
-      isResizing.value = next;
-      coreState.value.isResizing = next;
-    },
+    setIsResizing: (next) => helpers.setIsResizing(next),
     isSelectingBox,
-    setIsSelectingBox: (next) => {
-      isSelectingBox.value = next;
-      coreState.value.isSelectingBox = next;
-    },
+    setIsSelectingBox: (next) => helpers.setIsSelectingBox(next),
     selectionRect,
-    setSelectionRect: (next) => {
-      selectionRect.value = next;
-      coreState.value.selectionRect = next;
-    },
+    setSelectionRect: (next) => helpers.setSelectionRect(next),
     selectionOriginRef: selectionOriginRef as { value: { x: number; y: number } | null },
     isConnecting,
-    setIsConnecting: (next) => {
-      isConnecting.value = next;
-      coreState.value.isConnecting = next;
-    },
+    setIsConnecting: (next) => helpers.setIsConnecting(next),
     connectionStart,
-    setConnectionStart: (next) => {
-      connectionStart.value = next;
-      coreState.value.connectionStart = next;
-    },
+    setConnectionStart: (next) => helpers.setConnectionStart(next),
     connectionStartPort,
-    setConnectionStartPort: (next) => {
-      connectionStartPort.value = next;
-      coreState.value.connectionStartPort = next;
-    },
+    setConnectionStartPort: (next) => helpers.setConnectionStartPort(next),
     dragStart,
-    setDragStart: (next) => {
-      dragStart.value = next;
-      coreState.value.dragStart = next;
-    },
+    setDragStart: (next) => helpers.setDragStart(next),
     resizeHandle,
-    setResizeHandle: (next) => {
-      resizeHandle.value = next;
-      coreState.value.resizeHandle = next;
-    },
+    setResizeHandle: (next) => helpers.setResizeHandle(next),
     tempLine,
-    setTempLine: (next) => {
-      tempLine.value = next;
-      coreState.value.tempLine = next;
-    },
+    setTempLine: (next) => helpers.setTempLine(next),
     shapeIdCounter: shapeIdCounter as { value: number },
     hasCalledReady: hasCalledReady as { value: boolean },
     methodsRef: methodsRef as { value: CanvasComponentRef | null },
@@ -320,31 +354,16 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
     },
     skipNextCanvasClickClear: skipNextCanvasClickClear as { value: boolean },
     editingText,
-    setEditingText: (next) => {
-      editingText.value = next;
-      coreState.value.editingText = next;
-    },
+    setEditingText: (next) => helpers.setEditingText(next),
     editingInputRef,
     draggingHandle,
-    setDraggingHandle: (next) => {
-      draggingHandle.value = next;
-      coreState.value.draggingHandle = next;
-    },
+    setDraggingHandle: (next) => helpers.setDraggingHandle(next),
     draggingPolylinePoint,
-    setDraggingPolylinePoint: (next) => {
-      draggingPolylinePoint.value = next;
-      coreState.value.draggingPolylinePoint = next;
-    },
+    setDraggingPolylinePoint: (next) => helpers.setDraggingPolylinePoint(next),
     activePortHighlight,
-    setActivePortHighlight: (next) => {
-      activePortHighlight.value = next;
-      coreState.value.activePortHighlight = next;
-    },
+    setActivePortHighlight: (next) => helpers.setActivePortHighlight(next),
     hoveredShapeId,
-    setHoveredShapeId: (next) => {
-      hoveredShapeId.value = next;
-      coreState.value.hoveredShapeId = next;
-    },
+    setHoveredShapeId: (next) => helpers.setHoveredShapeId(next),
     resizeHandlesRef: resizeHandlesRef as { value: Map<string, SVGRectElement[]> },
     cornerHandlesRef: cornerHandlesRef as { value: Map<string, SVGRectElement[]> },
     textSelectionRef: textSelectionRef as { value: Map<string, SVGRectElement> },
@@ -352,10 +371,7 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
     lastPointerRef: lastPointerRef as { value: { x: number; y: number; clientX: number; clientY: number } },
     copyBufferRef: copyBufferRef as { value: { ids: string[]; shapes: SVGShape[] } | null },
     draggingCornerHandle,
-    setDraggingCornerHandle: (next) => {
-      draggingCornerHandle.value = next;
-      coreState.value.draggingCornerHandle = next;
-    },
+    setDraggingCornerHandle: (next) => helpers.setDraggingCornerHandle(next),
     viewBoxMinX,
     viewBoxMinY,
     viewBoxMaxX,

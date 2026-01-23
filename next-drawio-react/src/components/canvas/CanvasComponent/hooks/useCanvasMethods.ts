@@ -1,6 +1,7 @@
 import { useImperativeHandle, useMemo } from 'react';
 import type React from 'react';
 import type { CanvasComponentRef } from '../types';
+import { useCanvasMethods as useCanvasMethodsCore } from '@drawio/core';
 
 interface UseCanvasMethodsArgs {
   ref: React.Ref<CanvasComponentRef>;
@@ -56,113 +57,10 @@ interface UseCanvasMethodsArgs {
   hasClipboard: () => boolean;
 }
 
-export const useCanvasMethods = ({
-  ref,
-  methodsRef,
-  ZOOM_FACTOR,
-  addRectangle,
-  addRoundedRect,
-  addCircle,
-  addTriangle,
-  addLine,
-  addPolyline,
-  addText,
-  addSvgIcon,
-  selectAll,
-  clearSelection,
-  combineSelected,
-  ungroupSelected,
-  deleteSelected,
-  clearCanvas,
-  exportCanvas,
-  getCanvas,
-  getSelectedShape,
-  getSelectionCount,
-  duplicateSelected,
-  bringToFront,
-  sendToBack,
-  moveForward,
-  moveBackward,
-  rotateSelected,
-  rotateSelectedBy,
-  flipSelectedHorizontal,
-  flipSelectedVertical,
-  scaleSelected,
-  changeSelectedFill,
-  changeSelectedStroke,
-  changeSelectedStrokeWidth,
-  changeSelectedArrow,
-  changeSelectedOpacity,
-  undo,
-  redo,
-  exportJson,
-  importJson,
-  startConnection,
-  connectShapes,
-  canUndo,
-  canRedo,
-  addShapeAt,
-  setZoom,
-  zoomBy,
-  getZoom,
-  copySelection,
-  pasteClipboard,
-  hasClipboard,
-}: UseCanvasMethodsArgs) => {
-  const methods: CanvasComponentRef = useMemo(() => ({
-    addRectangle,
-    addRoundedRect,
-    addCircle,
-    addTriangle,
-    addLine,
-    addPolyline,
-    addText,
-    addSvgIcon,
-    selectAll,
-    clearSelection,
-    combineSelected,
-    ungroupSelected,
-    deleteSelected,
-    clearCanvas,
-    exportCanvas,
-    getCanvas,
-    getSelectedShape,
-    getSelectionCount,
-    duplicateSelected,
-    bringToFront,
-    sendToBack,
-    moveForward,
-    moveBackward,
-    rotateSelected,
-    rotateSelectedBy,
-    flipSelectedHorizontal,
-    flipSelectedVertical,
-    scaleSelected,
-    changeSelectedFill,
-    changeSelectedStroke,
-    changeSelectedStrokeWidth,
-    changeSelectedArrow,
-    changeSelectedOpacity,
-    undo,
-    redo,
-    exportJson,
-    importJson,
-    startConnection,
-    connectShapes,
-    canUndo,
-    canRedo,
-    addShapeAt,
-    setZoom,
-    zoomIn: (factor = ZOOM_FACTOR) => zoomBy(factor),
-    zoomOut: (factor = ZOOM_FACTOR) => zoomBy(1 / factor),
-    getZoom,
-    copySelection,
-    pasteClipboard,
-    hasClipboard,
-  }), [ZOOM_FACTOR, addCircle, addLine, addPolyline, addRectangle, addRoundedRect, addShapeAt, addSvgIcon, addText, addTriangle, bringToFront, canRedo, canUndo, changeSelectedArrow, changeSelectedFill, changeSelectedOpacity, changeSelectedStroke, changeSelectedStrokeWidth, clearCanvas, clearSelection, combineSelected, connectShapes, copySelection, deleteSelected, duplicateSelected, exportCanvas, exportJson, flipSelectedHorizontal, flipSelectedVertical, getCanvas, getSelectedShape, getSelectionCount, getZoom, importJson, moveBackward, moveForward, pasteClipboard, redo, rotateSelected, rotateSelectedBy, scaleSelected, selectAll, sendToBack, setZoom, startConnection, undo, ungroupSelected, zoomBy, hasClipboard]);
+export const useCanvasMethods = (args: UseCanvasMethodsArgs) => {
+  const { ref, ...coreArgs } = args;
+  const methods: CanvasComponentRef = useMemo(() => useCanvasMethodsCore(coreArgs), [coreArgs]);
 
-  methodsRef.current = methods;
   useImperativeHandle(ref, () => methods, [methods, ref]);
-
   return methods;
 };

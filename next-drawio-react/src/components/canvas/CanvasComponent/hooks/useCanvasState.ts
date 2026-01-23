@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CanvasComponentProps, CanvasComponentRef, HistoryState, SVGShape } from '../types';
-import { createCanvasState } from '@drawio/core';
+import { createCanvasState, useCanvasState as useCanvasStateCore } from '@drawio/core';
 
 export interface CanvasState {
   svgRef: React.RefObject<SVGSVGElement>;
@@ -144,31 +144,65 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
   const handleConnectionRef = useRef(false);
   const lastPointerRef = useRef({ x: 0, y: 0, clientX: 0, clientY: 0 });
   const copyBufferRef = useRef<{ ids: string[]; shapes: SVGShape[] } | null>(null);
+  const lastBoundsRef = useRef<{ minX: number; minY: number; maxX: number; maxY: number } | null>(null);
   const [draggingCornerHandle, setDraggingCornerHandleState] = useState<CanvasState['draggingCornerHandle']>(
     coreState.draggingCornerHandle
   );
 
-  useEffect(() => {
-    coreState.setProps(props);
-  }, [coreState, props]);
+  const helpers = useCanvasStateCore({
+    props,
+    coreState,
+    refs: {
+      svgRef,
+      editingInputRef,
+      selectionOriginRef,
+      lastBoundsRef,
+      shapeIdCounter,
+      hasCalledReady,
+      methodsRef,
+      portElementsRef,
+      connectorHandleRef,
+      skipNextCanvasClickClear,
+      resizeHandlesRef,
+      cornerHandlesRef,
+      textSelectionRef,
+      handleConnectionRef,
+      lastPointerRef,
+      copyBufferRef,
+    },
+    shapesRef,
+    selectedIdsRef,
+    setters: {
+      setShapesState,
+      setSelectedIdsState,
+      setHistoryState,
+      setHistoryIndexState,
+      setZoomState,
+      setIsDraggingState,
+      setIsResizingState,
+      setIsSelectingBoxState,
+      setSelectionRectState,
+      setIsConnectingState,
+      setConnectionStartState,
+      setConnectionStartPortState,
+      setDragStartState,
+      setResizeHandleState,
+      setTempLineState,
+      setEditingTextState,
+      setDraggingHandleState,
+      setDraggingPolylinePointState,
+      setActivePortHighlightState,
+      setHoveredShapeIdState,
+      setDraggingCornerHandleState,
+    },
+  });
 
   useEffect(() => {
-    coreState.svg = svgRef.current;
-    coreState.editingInput = editingInputRef.current;
-    coreState.selectionOrigin = selectionOriginRef.current;
-    coreState.lastBounds = lastBoundsRef.current;
-    coreState.shapeIdCounter = shapeIdCounter.current;
-    coreState.hasCalledReady = hasCalledReady.current;
-    coreState.methodsRef = methodsRef.current;
-    coreState.portElements = portElementsRef.current;
-    coreState.connectorHandle = connectorHandleRef.current;
-    coreState.skipNextCanvasClickClear = skipNextCanvasClickClear.current;
-    coreState.resizeHandles = resizeHandlesRef.current;
-    coreState.cornerHandles = cornerHandlesRef.current;
-    coreState.textSelection = textSelectionRef.current;
-    coreState.handleConnection = handleConnectionRef.current;
-    coreState.lastPointer = lastPointerRef.current;
-    coreState.copyBuffer = copyBufferRef.current;
+    helpers.syncProps();
+  }, [helpers, props]);
+
+  useEffect(() => {
+    helpers.syncRefs();
   });
 
   const viewBoxMinX = useMemo(() => coreState.getViewBoxBounds().minX, [coreState, props]);
@@ -177,242 +211,57 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
   const viewBoxMaxY = useMemo(() => coreState.getViewBoxBounds().maxY, [coreState, props]);
 
   const getPointerPosition = useCallback(
-    (clientX: number, clientY: number) => coreState.getPointerPosition(clientX, clientY),
-    [coreState]
+    (clientX: number, clientY: number) => helpers.getPointerPosition(clientX, clientY),
+    [helpers]
   );
 
-  const lastBoundsRef = useRef<{ minX: number; minY: number; maxX: number; maxY: number } | null>(null);
   const selectedShape = useMemo(() => {
     const first = selectedIds.values().next();
     return first.done ? null : first.value;
   }, [selectedIds]);
 
-  const setSelectedShape = useCallback((id: string | null) => {
-    const next = id ? new Set([id]) : new Set<string>();
-    coreState.selectedIds = next;
-    selectedIdsRef.current = next;
-    setSelectedIdsState(next);
-  }, [coreState]);
-
-  const setSelectedShapes = useCallback((ids: string[] | Set<string>) => {
-    const next = new Set(ids);
-    coreState.selectedIds = next;
-    selectedIdsRef.current = next;
-    setSelectedIdsState(next);
-  }, [coreState]);
-
   useEffect(() => {
     selectedIdsRef.current = selectedIds;
   }, [selectedIds]);
-
-  const setShapes = useCallback((updater: React.SetStateAction<SVGShape[]>) => {
-    setShapesState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.shapes = next;
-      shapesRef.current = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setSelectedIds = useCallback((updater: React.SetStateAction<Set<string>>) => {
-    setSelectedIdsState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.selectedIds = next;
-      selectedIdsRef.current = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setHistory = useCallback((updater: React.SetStateAction<HistoryState[]>) => {
-    setHistoryState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.history = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setHistoryIndex = useCallback((updater: React.SetStateAction<number>) => {
-    setHistoryIndexState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.historyIndex = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setZoom = useCallback((updater: React.SetStateAction<number>) => {
-    setZoomState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.zoom = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setIsDragging = useCallback((updater: React.SetStateAction<boolean>) => {
-    setIsDraggingState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.isDragging = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setIsResizing = useCallback((updater: React.SetStateAction<boolean>) => {
-    setIsResizingState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.isResizing = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setIsSelectingBox = useCallback((updater: React.SetStateAction<boolean>) => {
-    setIsSelectingBoxState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.isSelectingBox = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setSelectionRect = useCallback((updater: React.SetStateAction<{ x: number; y: number; w: number; h: number } | null>) => {
-    setSelectionRectState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.selectionRect = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setIsConnecting = useCallback((updater: React.SetStateAction<boolean>) => {
-    setIsConnectingState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.isConnecting = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setConnectionStart = useCallback((updater: React.SetStateAction<string | null>) => {
-    setConnectionStartState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.connectionStart = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setConnectionStartPort = useCallback((updater: React.SetStateAction<string | null>) => {
-    setConnectionStartPortState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.connectionStartPort = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setDragStart = useCallback((updater: React.SetStateAction<{ x: number; y: number }>) => {
-    setDragStartState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.dragStart = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setResizeHandle = useCallback((updater: React.SetStateAction<string | null>) => {
-    setResizeHandleState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.resizeHandle = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setTempLine = useCallback((updater: React.SetStateAction<SVGElement | null>) => {
-    setTempLineState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.tempLine = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setEditingText = useCallback((updater: React.SetStateAction<CanvasState['editingText']>) => {
-    setEditingTextState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.editingText = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setDraggingHandle = useCallback((updater: React.SetStateAction<CanvasState['draggingHandle']>) => {
-    setDraggingHandleState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.draggingHandle = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setDraggingPolylinePoint = useCallback((updater: React.SetStateAction<CanvasState['draggingPolylinePoint']>) => {
-    setDraggingPolylinePointState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.draggingPolylinePoint = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setActivePortHighlight = useCallback((updater: React.SetStateAction<CanvasState['activePortHighlight']>) => {
-    setActivePortHighlightState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.activePortHighlight = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setHoveredShapeId = useCallback((updater: React.SetStateAction<string | null>) => {
-    setHoveredShapeIdState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.hoveredShapeId = next;
-      return next;
-    });
-  }, [coreState]);
-
-  const setDraggingCornerHandle = useCallback((updater: React.SetStateAction<CanvasState['draggingCornerHandle']>) => {
-    setDraggingCornerHandleState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      coreState.draggingCornerHandle = next;
-      return next;
-    });
-  }, [coreState]);
 
   return {
     svgRef,
     shapes,
     shapesRef,
-    setShapes,
+    setShapes: helpers.setShapes,
     selectedIds,
-    setSelectedIds,
+    setSelectedIds: helpers.setSelectedIds,
     selectedIdsRef,
     selectedShape,
-    setSelectedShape,
-    setSelectedShapes,
+    setSelectedShape: helpers.setSelectedShape,
+    setSelectedShapes: helpers.setSelectedShapes,
     history,
-    setHistory,
+    setHistory: helpers.setHistory,
     historyIndex,
-    setHistoryIndex,
+    setHistoryIndex: helpers.setHistoryIndex,
     zoom,
-    setZoom,
+    setZoom: helpers.setZoom,
     isDragging,
-    setIsDragging,
+    setIsDragging: helpers.setIsDragging,
     isResizing,
-    setIsResizing,
+    setIsResizing: helpers.setIsResizing,
     isSelectingBox,
-    setIsSelectingBox,
+    setIsSelectingBox: helpers.setIsSelectingBox,
     selectionRect,
-    setSelectionRect,
+    setSelectionRect: helpers.setSelectionRect,
     selectionOriginRef,
     isConnecting,
-    setIsConnecting,
+    setIsConnecting: helpers.setIsConnecting,
     connectionStart,
-    setConnectionStart,
+    setConnectionStart: helpers.setConnectionStart,
     connectionStartPort,
-    setConnectionStartPort,
+    setConnectionStartPort: helpers.setConnectionStartPort,
     dragStart,
-    setDragStart,
+    setDragStart: helpers.setDragStart,
     resizeHandle,
-    setResizeHandle,
+    setResizeHandle: helpers.setResizeHandle,
     tempLine,
-    setTempLine,
+    setTempLine: helpers.setTempLine,
     shapeIdCounter,
     hasCalledReady,
     methodsRef,
@@ -420,16 +269,16 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
     connectorHandleRef,
     skipNextCanvasClickClear,
     editingText,
-    setEditingText,
+    setEditingText: helpers.setEditingText,
     editingInputRef,
     draggingHandle,
-    setDraggingHandle,
+    setDraggingHandle: helpers.setDraggingHandle,
     draggingPolylinePoint,
-    setDraggingPolylinePoint,
+    setDraggingPolylinePoint: helpers.setDraggingPolylinePoint,
     activePortHighlight,
-    setActivePortHighlight,
+    setActivePortHighlight: helpers.setActivePortHighlight,
     hoveredShapeId,
-    setHoveredShapeId,
+    setHoveredShapeId: helpers.setHoveredShapeId,
     resizeHandlesRef,
     cornerHandlesRef,
     textSelectionRef,
@@ -437,7 +286,7 @@ export const useCanvasState = (props: CanvasComponentProps): CanvasState => {
     lastPointerRef,
     copyBufferRef,
     draggingCornerHandle,
-    setDraggingCornerHandle,
+    setDraggingCornerHandle: helpers.setDraggingCornerHandle,
     viewBoxMinX,
     viewBoxMinY,
     viewBoxMaxX,
