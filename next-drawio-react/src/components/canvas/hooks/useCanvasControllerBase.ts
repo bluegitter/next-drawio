@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type React from 'react';
-import type { CanvasComponentProps, SVGShape } from '../types';
+import type { CanvasComponentProps, SVGShape } from '../canvas-types';
 import { useCanvasControllerBase as useCanvasControllerBaseCore } from '@drawio/core';
 
 interface UseCanvasControllerBaseArgs {

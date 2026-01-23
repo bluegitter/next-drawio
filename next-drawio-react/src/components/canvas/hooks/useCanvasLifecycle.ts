@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type React from 'react';
-import type { CanvasComponentProps, CanvasComponentRef, SVGShape } from '../types';
+import type { CanvasComponentProps, CanvasComponentRef, SVGShape } from '../canvas-types';
 import { useCanvasLifecycle as useCanvasLifecycleCore } from '@drawio/core';
 import { useCanvasMethods } from './useCanvasMethods';
 

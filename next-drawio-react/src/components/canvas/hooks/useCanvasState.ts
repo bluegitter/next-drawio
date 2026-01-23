@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CanvasComponentProps, CanvasComponentRef, HistoryState, SVGShape } from '../types';
+import type { CanvasComponentProps, CanvasComponentRef, HistoryState, SVGShape } from '../canvas-types';
 import { createCanvasState, useCanvasState as useCanvasStateCore } from '@drawio/core';
 
 export interface CanvasState {

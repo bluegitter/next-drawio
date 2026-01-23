@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { HistoryState, SVGShape } from '../types';
+import type { HistoryState, SVGShape } from '../canvas-types';
 import { useHistory as useHistoryCore } from '@drawio/core';
 
 interface UseHistoryArgs {

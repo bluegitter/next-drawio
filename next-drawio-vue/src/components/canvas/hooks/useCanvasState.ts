@@ -1,6 +1,6 @@
 import type { ComputedRef, Ref } from 'vue';
 import { computed, ref, shallowRef, watch, watchEffect } from 'vue';
-import type { CanvasComponentProps, CanvasComponentRef, HistoryState, SVGShape } from '../types';
+import type { CanvasComponentProps, CanvasComponentRef, HistoryState, SVGShape } from '../canvas-types';
 import { createCanvasState, useCanvasState as useCanvasStateCore } from '@drawio/core';
 
 type EditingText = {

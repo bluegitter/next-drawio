@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import type { CanvasComponentRef } from "../canvas/canvas-types";
+import type { CanvasComponentRef } from "../../canvas/canvas-types";
 
 type UseSelectionStyleActionsArgs = {
   canvasMethodsRef: Ref<CanvasComponentRef | null>;

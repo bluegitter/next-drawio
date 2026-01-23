@@ -1,6 +1,6 @@
 import { useImperativeHandle, useMemo } from 'react';
 import type React from 'react';
-import type { CanvasComponentRef } from '../types';
+import type { CanvasComponentRef } from '../canvas-types';
 import { useCanvasMethods as useCanvasMethodsCore } from '@drawio/core';
 
 interface UseCanvasMethodsArgs {

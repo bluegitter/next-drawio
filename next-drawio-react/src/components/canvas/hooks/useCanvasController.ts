@@ -1,5 +1,5 @@
-import type React from 'react';
-import type { CanvasComponentProps, SVGShape } from '../types';
+import type { CanvasComponentProps, SVGShape } from '../canvas-types';
+import type { CanvasState } from './useCanvasState';
 import { useCanvasControllerBase } from './useCanvasControllerBase';
 import { useCanvasControllerActions } from './useCanvasControllerActions';
 
@@ -7,52 +7,32 @@ interface UseCanvasControllerArgs {
   props: CanvasComponentProps;
   updateCylinderPath: (shape: SVGShape) => void;
   updateCloudPath: (shape: SVGShape) => void;
-  state: {
-    svgRef: React.RefObject<SVGSVGElement>;
-    shapes: SVGShape[];
-    shapesRef: React.MutableRefObject<SVGShape[]>;
-    setShapes: React.Dispatch<React.SetStateAction<SVGShape[]>>;
-    selectedIds: Set<string>;
-    setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-    selectedIdsRef: React.MutableRefObject<Set<string>>;
-    selectedShape: string | null;
-    setSelectedShape: (id: string | null) => void;
-    setSelectedShapes: (ids: string[] | Set<string>) => void;
-    history: any[];
-    setHistory: React.Dispatch<React.SetStateAction<any[]>>;
-    historyIndex: number;
-    setHistoryIndex: React.Dispatch<React.SetStateAction<number>>;
-    setIsResizing: React.Dispatch<React.SetStateAction<boolean>>;
-    setResizeHandle: React.Dispatch<React.SetStateAction<string | null>>;
-    setDragStart: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
-    setDraggingCornerHandle: React.Dispatch<React.SetStateAction<{ shapeId: string; handleType: string; startCornerRadius: number } | null>>;
-    setIsConnecting: React.Dispatch<React.SetStateAction<boolean>>;
-    setConnectionStart: React.Dispatch<React.SetStateAction<string | null>>;
-    setConnectionStartPort: React.Dispatch<React.SetStateAction<string | null>>;
-    tempLine: SVGElement | null;
-    setTempLine: React.Dispatch<React.SetStateAction<SVGElement | null>>;
-    shapeIdCounter: React.MutableRefObject<number>;
-    methodsRef: React.MutableRefObject<any>;
-    portElementsRef: React.MutableRefObject<Map<string, SVGCircleElement[]>>;
-    connectorHandleRef: React.MutableRefObject<Map<string, { start: SVGCircleElement; end: SVGCircleElement }>>;
-    editingText: { id: string } | null;
-    setEditingText: React.Dispatch<React.SetStateAction<any>>;
-    editingInputRef: React.RefObject<HTMLInputElement>;
-    activePortHighlight: { shapeId: string; portId: string } | null;
-    setActivePortHighlight: React.Dispatch<React.SetStateAction<{ shapeId: string; portId: string } | null>>;
-    setHoveredShapeId: React.Dispatch<React.SetStateAction<string | null>>;
-    resizeHandlesRef: React.MutableRefObject<Map<string, SVGRectElement[]>>;
-    cornerHandlesRef: React.MutableRefObject<Map<string, SVGRectElement[]>>;
-    textSelectionRef: React.MutableRefObject<Map<string, SVGRectElement>>;
-    handleConnectionRef: React.MutableRefObject<boolean>;
-    copyBufferRef: React.MutableRefObject<{ ids: string[]; shapes: SVGShape[] } | null>;
-    setDraggingHandle: React.Dispatch<React.SetStateAction<{ connectorId: string; end: 'start' | 'end'; original: any } | null>>;
-    getPointerPosition: (clientX: number, clientY: number) => { x: number; y: number };
-  };
+  state: CanvasState;
 }
 
 export const useCanvasController = ({ props, updateCylinderPath, updateCloudPath, state }: UseCanvasControllerArgs) => {
-  const base = useCanvasControllerBase({ props, state });
+  const base = useCanvasControllerBase({ props, state }) as {
+    setShapesState: (updater: (prev: SVGShape[]) => SVGShape[]) => void;
+    historyActions: {
+      saveToHistory: (snapshotShapes?: SVGShape[], snapshotSelectedIds?: string[] | Set<string> | string | null) => void;
+    };
+    geometry: {
+      createSVGElement: (tagName: string) => SVGElement | null;
+      generateId: () => string;
+      getDef: (shapeOrType: SVGShape | string) => any;
+      getShapeCenter: (shape: SVGShape) => { x: number; y: number };
+      getPortPositionById: (shape: SVGShape, portId?: string | null) => { x: number; y: number } | null;
+      getShapeBounds: (shape: SVGShape) => { minX: number; minY: number; maxX: number; maxY: number };
+      getBounds: (shape: SVGShape) => { x: number; y: number; w: number; h: number };
+      updateConnectorPoints: (shape: SVGShape, points: Array<[number, number]>) => void;
+      updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
+    };
+    derived: {
+      groupSelectionBounds: { x: number; y: number; w: number; h: number } | null;
+      polylineHandles: Array<{ shapeId: string; index: number; x: number; y: number }>;
+    };
+  };
+
   const actions = useCanvasControllerActions({
     props,
     updateCylinderPath,

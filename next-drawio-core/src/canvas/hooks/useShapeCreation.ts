@@ -19,7 +19,7 @@ type UseShapeCreationArgs = {
   saveToHistory: (snapshotShapes?: SVGShape[], snapshotSelectedIds?: string[] | Set<string> | string | null) => void;
   onShapeSelect?: (shape: SVGElement | null) => void;
   selectedIds: MaybeRef<Set<string>>;
-  tempLine: RefLike<SVGElement>;
+  tempLine: MaybeRef<SVGElement | null>;
   setTempLine: (next: SVGElement | null) => void;
   setIsConnecting: (next: boolean) => void;
   setConnectionStart: (next: string | null) => void;

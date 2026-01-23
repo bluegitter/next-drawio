@@ -17,7 +17,7 @@ export type UsePointerUpArgs = {
   isResizing: MaybeRef<boolean>;
   isSelectingBox: MaybeRef<boolean>;
   selectionRect: MaybeRef<{ x: number; y: number; w: number; h: number } | null>;
-  selectionOriginRef: RefLike<{ x: number; y: number }>;
+  selectionOriginRef: RefLike<{ x: number; y: number } | null>;
   tempLine: MaybeRef<SVGElement | null>;
   activePortHighlight: MaybeRef<{ shapeId: string; portId: string } | null>;
   hoveredShapeId: MaybeRef<string | null>;

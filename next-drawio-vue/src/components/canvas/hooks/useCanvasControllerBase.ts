@@ -1,4 +1,4 @@
-import type { CanvasComponentProps, SVGShape } from '../types';
+import type { CanvasComponentProps, SVGShape } from '../canvas-types';
 import { useCanvasControllerBase as useCanvasControllerBaseCore } from '@drawio/core';
 import type { CanvasState } from './useCanvasState';
 

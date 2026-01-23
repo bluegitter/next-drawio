@@ -17,7 +17,7 @@ export type UsePointerMoveArgs = {
   isDragging: MaybeRef<boolean>;
   isResizing: MaybeRef<boolean>;
   isSelectingBox: MaybeRef<boolean>;
-  selectionOriginRef: RefLike<{ x: number; y: number }>;
+  selectionOriginRef: RefLike<{ x: number; y: number } | null>;
   hoveredShapeId: MaybeRef<string | null>;
   activePortHighlight: MaybeRef<{ shapeId: string; portId: string } | null>;
   resizeHandle: MaybeRef<string | null>;
@@ -50,6 +50,7 @@ export type UsePointerMoveArgs = {
   resetPortStyle: (el: SVGCircleElement) => void;
   showPorts: (shape: SVGShape) => void;
   hidePorts: (shapeId: string) => void;
+  showCornerHandles: (shape: SVGShape) => void;
   lastPointerRef: RefLike<{ x: number; y: number; clientX: number; clientY: number }>;
   enableConnectorNodeSnap?: boolean;
   connectorNodeSnapDistance?: number;

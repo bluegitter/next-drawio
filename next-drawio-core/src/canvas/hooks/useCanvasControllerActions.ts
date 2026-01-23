@@ -48,6 +48,8 @@ export type UseCanvasControllerActionsArgs = {
     copyBufferRef: RefLike<{ ids: string[]; shapes: SVGShape[] } | null>;
     setDraggingHandle: (next: { connectorId: string; end: 'start' | 'end'; original: any } | null) => void;
     setIsResizing: (next: boolean) => void;
+    viewBoxMinX: RefLike<number>;
+    viewBoxMinY: RefLike<number>;
     setResizeHandle: (next: string | null) => void;
     setDragStart: (next: { x: number; y: number }) => void;
     setDraggingCornerHandle: (next: { shapeId: string; handleType: string; startCornerRadius: number } | null) => void;
@@ -70,6 +72,10 @@ export type UseCanvasControllerActionsArgs = {
       getBounds: (shape: SVGShape) => { x: number; y: number; w: number; h: number };
       updateConnectorPoints: (shape: SVGShape, points: Array<[number, number]>) => void;
       updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
+    };
+    derived: {
+      groupSelectionBounds: { x: number; y: number; w: number; h: number } | null;
+      polylineHandles: Array<{ shapeId: string; index: number; x: number; y: number }>;
     };
   };
 };
@@ -100,6 +106,8 @@ export const useCanvasControllerActions = ({
     textSelectionRef: state.textSelectionRef,
     editingInputRef: state.editingInputRef,
     setEditingText: state.setEditingText,
+    viewBoxMinX: state.viewBoxMinX,
+    viewBoxMinY: state.viewBoxMinY,
   });
 
   const shapeCreation = useShapeCreation({

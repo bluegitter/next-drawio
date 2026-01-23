@@ -2,7 +2,7 @@
 
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { ToolType } from '@/components/EnhancedToolbar';
-import type { CanvasComponentRef } from '@/components/canvas/CanvasComponent/types';
+import type { CanvasComponentRef } from '@/components/canvas/canvas-types';
 import { PropertyPanel } from '@/components/PropertyPanel';
 import TopMenuBar from '@/components/editor/TopMenuBar';
 import Toolbar from '@/components/editor/Toolbar';

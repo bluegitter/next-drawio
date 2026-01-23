@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type React from 'react';
-import type { SVGShape } from '../types';
+import type { SVGShape } from '../canvas-types';
 import { useShapeEventBindings as useShapeEventBindingsCore } from '@drawio/core';
 
 export type UseShapeEventBindingsArgs = Omit<Parameters<typeof useShapeEventBindingsCore>[0], 'handleShapeMouseDown'> & {

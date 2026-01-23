@@ -1,13 +1,13 @@
 import { getPortsForShape } from '../../shapes';
 import type { SVGShape } from '../types';
-import type { RefLike } from '../../utils/refs';
+import type { MaybeRef, RefLike } from '../../utils/refs';
 import { getRefValue } from '../../utils/refs';
 
 type UseConnectionsArgs = {
   svgRef: RefLike<SVGSVGElement>;
   portElementsRef: RefLike<Map<string, SVGElement[]>>;
   connectorHandleRef: RefLike<Map<string, { start: SVGCircleElement; end: SVGCircleElement }>>;
-  activePortHighlight: RefLike<{ shapeId: string; portId: string }>;
+  activePortHighlight: MaybeRef<{ shapeId: string; portId: string } | null>;
   setActivePortHighlight: (next: { shapeId: string; portId: string } | null) => void;
   createSVGElement: (tagName: string) => SVGElement | null;
   startConnection: (fromShape: string, fromPortId?: string) => void;

@@ -9,7 +9,7 @@ type UseClipboardArgs = {
   svgRef: RefLike<SVGSVGElement>;
   shapes: MaybeRef<SVGShape[]>;
   selectedIds: MaybeRef<Set<string>>;
-  copyBufferRef: RefLike<{ ids: string[]; shapes: SVGShape[] }>;
+  copyBufferRef: RefLike<{ ids: string[]; shapes: SVGShape[] } | null>;
   createSVGElement: (tagName: string) => SVGElement | null;
   generateId: () => string;
   getDef: (shapeOrType: SVGShape | string) => ShapeDefinition | undefined;
