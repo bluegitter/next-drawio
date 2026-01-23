@@ -234,6 +234,13 @@ export const useSelection = ({
 
   const showCornerHandles = (shape: SVGShape) => {
     if (!svgRef.value || shape.type !== 'roundedRect') return;
+    
+    // 检查是否已经存在handles，避免重复创建
+    const existingHandles = cornerHandlesRef.value.get(shape.id);
+    if (existingHandles && existingHandles.length > 0) {
+      return; // 已存在handles，不重复创建
+    }
+    
     hideCornerHandles(shape.id);
     const def = getDef(shape);
     if (!def?.getCornerHandles) return;

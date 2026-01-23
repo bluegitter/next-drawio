@@ -70,12 +70,41 @@ export const handleResizeMove = ({
       const handleX = rightTopX - (radiusRatio * shapeHeight / 3);  // 圆角为0时，handle在最右边
       const handleY = rightTopY + offset;
 
+      // 获取形状的旋转变换
+      const rotation = shape.data.rotation || 0;
+      const scale = shape.data.scale || 1;
+      const centerX = shapeX + shapeWidth / 2;
+      const centerY = shapeY + shapeHeight / 2;
+
+      // 应用旋转变换到handle位置
+      const toRadians = (degrees: number) => degrees * Math.PI / 180;
+      const rotatePoint = (x: number, y: number, cx: number, cy: number, angle: number) => {
+        const rad = toRadians(angle);
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        return {
+          x: (x - cx) * cos - (y - cy) * sin + cx,
+          y: (x - cx) * sin + (y - cy) * cos + cy
+        };
+      };
+
+      const scalePoint = (x: number, y: number, cx: number, cy: number, s: number) => {
+        return {
+          x: (x - cx) * s + cx,
+          y: (y - cy) * s + cy
+        };
+      };
+
+      // 先缩放再旋转
+      let transformedHandle = scalePoint(handleX, handleY, centerX, centerY, scale);
+      transformedHandle = rotatePoint(transformedHandle.x, transformedHandle.y, centerX, centerY, rotation);
+
       const handles = cornerHandlesRef.current.get(shape.id);
       const handleEl = handles?.find(h => h.getAttribute('data-corner-handle') === draggingCornerHandle.handleType);
       if (handleEl) {
         const size = Number(handleEl.getAttribute('width')) || 10;
-        handleEl.setAttribute('x', String(handleX - size / 2));
-        handleEl.setAttribute('y', String(handleY - size / 2));
+        handleEl.setAttribute('x', String(transformedHandle.x - size / 2));
+        handleEl.setAttribute('y', String(transformedHandle.y - size / 2));
       }
 
       const updatedShape = {

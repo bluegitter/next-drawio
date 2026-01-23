@@ -17,6 +17,7 @@ type UseShapeStylesArgs = {
   toDataUri: (svgText: string) => string;
   tintDataUri: (dataUri: string, color: string) => string;
   updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
+  refreshCornerHandles: (shape: SVGShape) => void;
 };
 
 export const useShapeStyles = ({
@@ -35,11 +36,17 @@ export const useShapeStyles = ({
   toDataUri,
   tintDataUri,
   updateConnectionLine,
+  refreshCornerHandles,
 }: UseShapeStylesArgs) => {
   const rotateSelected = (angle: number) => {
     updateSelectedShape((shape) => {
       shape.data.rotation = angle;
       applyTransform(shape);
+      
+      // 旋转时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
     });
     setTimeout(() => {
       selectedIdsRef.value.forEach((id) => {
@@ -59,6 +66,11 @@ export const useShapeStyles = ({
       const current = shape.data.rotation || 0;
       shape.data.rotation = current + delta;
       applyTransform(shape);
+      
+      // 旋转时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
     });
     setTimeout(() => {
       selectedIdsRef.value.forEach((id) => {
@@ -92,6 +104,11 @@ export const useShapeStyles = ({
     updateSelectedShape((shape) => {
       shape.data.scale = safeScale;
       applyTransform(shape);
+      
+      // 缩放时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
     });
     setTimeout(() => {
       selectedIdsRef.value.forEach((id) => {

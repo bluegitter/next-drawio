@@ -270,6 +270,7 @@ const styleActions = useShapeStyles({
   toDataUri,
   tintDataUri,
   updateConnectionLine: controllerBase.geometry.updateConnectionLine,
+  refreshCornerHandles: selectionUi.refreshCornerHandles,
 });
 useKeyboardShortcuts({
   deleteSelected: selectionActions.deleteSelected,

@@ -18,6 +18,7 @@ interface UseShapeStylesArgs {
   toDataUri: (svgText: string) => string | null;
   tintDataUri: (dataUri: string, color: string) => string;
   updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
+  refreshCornerHandles: (shape: SVGShape) => void;
 }
 
 export const useShapeStyles = ({
@@ -36,21 +37,32 @@ export const useShapeStyles = ({
   toDataUri,
   tintDataUri,
   updateConnectionLine,
+  refreshCornerHandles,
 }: UseShapeStylesArgs) => {
   const rotateSelected = useCallback((angle: number) => {
     updateSelectedShape(shape => {
       shape.data.rotation = angle;
       applyTransform(shape);
+      
+      // 旋转时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
     });
-  }, [applyTransform, updateSelectedShape]);
+  }, [applyTransform, updateSelectedShape, refreshCornerHandles]);
 
   const rotateSelectedBy = useCallback((delta: number) => {
     updateSelectedShape(shape => {
       const current = shape.data.rotation || 0;
       shape.data.rotation = current + delta;
       applyTransform(shape);
+      
+      // 旋转时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
     });
-  }, [applyTransform, updateSelectedShape]);
+  }, [applyTransform, updateSelectedShape, refreshCornerHandles]);
 
   const flipSelectedHorizontal = useCallback(() => {
     updateSelectedShape(shape => {
@@ -71,6 +83,11 @@ export const useShapeStyles = ({
     updateSelectedShape(shape => {
       shape.data.scale = safeScale;
       applyTransform(shape);
+      
+      // 缩放时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
     });
     setTimeout(() => {
       selectedIdsRef.current.forEach(id => {
@@ -83,7 +100,7 @@ export const useShapeStyles = ({
         }
       });
     }, 0);
-  }, [applyTransform, updateSelectedShape, selectedIdsRef, shapesRef, updateConnectionLine]);
+  }, [applyTransform, updateSelectedShape, refreshCornerHandles, selectedIdsRef, shapesRef, updateConnectionLine]);
 
   const updateLineMarkers = useCallback((shape: SVGShape) => {
     if (shape.type !== 'line') return;

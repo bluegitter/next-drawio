@@ -49,7 +49,6 @@ export type UsePointerMoveArgs = {
   resetPortStyle: (el: SVGCircleElement) => void;
   showPorts: (shape: SVGShape) => void;
   hidePorts: (shapeId: string) => void;
-  showCornerHandles: (shape: SVGShape) => void;
   lastPointerRef: { value: { x: number; y: number; clientX: number; clientY: number } };
   enableConnectorNodeSnap?: boolean;
   connectorNodeSnapDistance?: number;
@@ -104,7 +103,6 @@ export const usePointerMove = ({
   resetPortStyle,
   showPorts,
   hidePorts,
-  showCornerHandles,
   lastPointerRef,
   enableConnectorNodeSnap = true,
   connectorNodeSnapDistance = 14,
@@ -256,7 +254,6 @@ export const usePointerMove = ({
           updateShapeSize,
           refreshResizeHandles,
           refreshCornerHandles,
-          showCornerHandles,
           updateConnectionLine,
           viewBoxMinX: viewBoxMinX.value,
           viewBoxMinY: viewBoxMinY.value,

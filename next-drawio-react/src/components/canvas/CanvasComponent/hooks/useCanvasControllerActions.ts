@@ -271,6 +271,7 @@ export const useCanvasControllerActions = ({ props, updateCylinderPath, updateCl
     toDataUri,
     tintDataUri,
     updateConnectionLine: base.geometry.updateConnectionLine,
+    refreshCornerHandles: selectionUi.refreshCornerHandles,
   });
 
   const connectorNodes = useConnectorNodes({
