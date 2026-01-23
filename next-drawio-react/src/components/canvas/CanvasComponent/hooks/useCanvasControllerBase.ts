@@ -1,10 +1,7 @@
 import { useCallback } from 'react';
 import type React from 'react';
 import type { CanvasComponentProps, SVGShape } from '../types';
-import { useHistory } from './useHistory';
-import { useCanvasGeometry } from './useCanvasGeometry';
-import { useCanvasDerived } from './useCanvasDerived';
-import { parsePoints } from '@drawio/core';
+import { useCanvasControllerBase as useCanvasControllerBaseCore } from '@drawio/core';
 
 interface UseCanvasControllerBaseArgs {
   props: CanvasComponentProps;
@@ -29,73 +26,32 @@ interface UseCanvasControllerBaseArgs {
 }
 
 export const useCanvasControllerBase = ({ props, state }: UseCanvasControllerBaseArgs) => {
-  const {
-    onShapeSelect,
-    onCanvasChange,
-  } = props;
-  const {
-    svgRef,
-    shapes,
-    shapesRef,
-    setShapes,
-    selectedIds,
-    setSelectedIds,
-    history,
-    setHistory,
-    historyIndex,
-    setHistoryIndex,
-    setIsConnecting,
-    setConnectionStart,
-    setConnectionStartPort,
-    setTempLine,
-    shapeIdCounter,
-    portElementsRef,
-  } = state;
-
   const setShapesState = useCallback((updater: (prev: SVGShape[]) => SVGShape[]) => {
-    setShapes(prev => {
+    state.setShapes((prev) => {
       const next = updater(prev);
-      shapesRef.current = next;
+      state.shapesRef.current = next;
       return next;
     });
-  }, [setShapes, shapesRef]);
+  }, [state]);
 
-  const historyActions = useHistory({
-    svgRef,
-    shapes,
-    selectedIds,
-    history,
-    historyIndex,
-    setHistory,
-    setHistoryIndex,
-    setShapesState,
-    setSelectedIds,
-    setIsConnecting,
-    setConnectionStart,
-    setTempLine,
-    setConnectionStartPort,
-    portElementsRef,
-    onShapeSelect,
-    onCanvasChange,
+  return useCanvasControllerBaseCore({
+    props,
+    state: {
+      svgRef: state.svgRef,
+      shapes: state.shapes,
+      selectedIds: state.selectedIds,
+      history: state.history,
+      historyIndex: state.historyIndex,
+      setHistory: state.setHistory,
+      setHistoryIndex: state.setHistoryIndex,
+      setSelectedIds: (next) => state.setSelectedIds(next),
+      setIsConnecting: state.setIsConnecting,
+      setConnectionStart: state.setConnectionStart,
+      setConnectionStartPort: state.setConnectionStartPort,
+      setTempLine: state.setTempLine,
+      shapeIdCounter: state.shapeIdCounter,
+      portElementsRef: state.portElementsRef,
+      setShapesState,
+    },
   });
-
-  const geometry = useCanvasGeometry({
-    svgRef,
-    shapes,
-    shapeIdCounter,
-  });
-
-  const derived = useCanvasDerived({
-    shapes,
-    selectedIds,
-    getShapeBounds: geometry.getShapeBounds,
-    parsePoints,
-  });
-
-  return {
-    setShapesState,
-    historyActions,
-    geometry,
-    derived,
-  };
 };

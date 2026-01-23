@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import type React from 'react';
 import type { CanvasComponentProps, CanvasComponentRef, SVGShape } from '../types';
-import { useKeyboardShortcuts } from './useKeyboardShortcuts';
-import { useBoundsChange } from './useBoundsChange';
-import { useAutoResize } from './useAutoResize';
+import { useCanvasLifecycle as useCanvasLifecycleCore } from '@drawio/core';
 import { useCanvasMethods } from './useCanvasMethods';
 
 interface UseCanvasLifecycleArgs {
@@ -99,54 +97,28 @@ interface UseCanvasLifecycleArgs {
 }
 
 export const useCanvasLifecycle = ({ ref, props, state, controller, zoom }: UseCanvasLifecycleArgs) => {
-  const {
-    onReady,
-    onBoundsChange,
-    autoResize = false,
-  } = props;
-
-  useKeyboardShortcuts({
-    deleteSelected: controller.selectionActions.deleteSelected,
-    duplicateSelected: controller.clipboard.duplicateSelected,
-    copySelection: controller.clipboard.copySelection,
-    pasteClipboard: controller.clipboard.pasteClipboard,
-    undo: controller.historyActions.undo,
-    redo: controller.historyActions.redo,
-    clearSelection: controller.selectionActions.clearSelection,
-    selectAllShapes: controller.selectionActions.selectAllShapes,
-    combineSelected: controller.selectionActions.combineSelected,
-    ungroupSelected: controller.selectionActions.ungroupSelected,
-    isConnecting: state.isConnecting,
-    tempLine: state.tempLine,
-    svgRef: state.svgRef,
-    setTempLine: state.setTempLine,
-    setIsConnecting: state.setIsConnecting,
-    setConnectionStart: state.setConnectionStart,
-    setConnectionStartPort: state.setConnectionStartPort,
-  });
-
-  useBoundsChange({
-    shapes: state.shapes,
-    getShapeBounds: controller.geometry.getShapeBounds,
-    lastBoundsRef: state.lastBoundsRef,
-    onBoundsChange,
-  });
-
-  useAutoResize({
-    autoResize,
-    width: props.width,
-    height: props.height,
-    shapes: state.shapes,
-    getShapeBounds: controller.geometry.getShapeBounds,
+  const lifecycle = useCanvasLifecycleCore({
+    props,
+    state,
+    controller,
+    zoom,
   });
 
   useEffect(() => {
-    if (!state.editingText) return;
-    const exists = state.shapes.some(s => s.id === state.editingText?.id);
-    if (!exists) {
-      state.setEditingText(null);
-    }
-  }, [state.editingText, state.setEditingText, state.shapes]);
+    return lifecycle.bindKeyboardShortcuts();
+  }, [lifecycle]);
+
+  useEffect(() => {
+    lifecycle.checkBounds();
+  }, [lifecycle, state.shapes]);
+
+  useEffect(() => {
+    lifecycle.checkAutoResize();
+  }, [lifecycle, props.width, props.height, state.shapes, props.autoResize]);
+
+  useEffect(() => {
+    lifecycle.syncEditingText();
+  }, [lifecycle, state.editingText, state.shapes]);
 
   useCanvasMethods({
     ref,
@@ -203,9 +175,6 @@ export const useCanvasLifecycle = ({ ref, props, state, controller, zoom }: UseC
   });
 
   useEffect(() => {
-    if (state.svgRef.current && onReady && state.methodsRef.current && !state.hasCalledReady.current) {
-      onReady(state.svgRef.current, state.methodsRef.current);
-      state.hasCalledReady.current = true;
-    }
-  }, [onReady, state.hasCalledReady, state.methodsRef, state.svgRef]);
+    lifecycle.notifyReady();
+  }, [lifecycle, props.onReady, state.methodsRef, state.svgRef]);
 };
