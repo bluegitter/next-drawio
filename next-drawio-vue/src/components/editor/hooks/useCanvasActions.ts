@@ -1,13 +1,16 @@
+/**
+ * Vue 适配层 - 将核心画布操作逻辑适配为 Vue hooks
+ */
 import type { Ref } from 'vue';
 import type { CanvasComponentRef } from "../../canvas/canvas-types";
+import { createCanvasActions, type CanvasComponentMethods } from '@drawio/core';
 
 type UseCanvasActionsArgs = {
   canvasMethodsRef: Ref<CanvasComponentRef | null>;
   refreshHistoryState: () => void;
   setSelectionCount: (value: number) => void;
-  setSelectedShape: (value: SVGElement | null) => void;
+  setSelectedShape: (value: any) => void;
   setCanPaste: (value: boolean) => void;
-  canPaste: Ref<boolean>;
 };
 
 export const useCanvasActions = ({
@@ -16,173 +19,255 @@ export const useCanvasActions = ({
   setSelectionCount,
   setSelectedShape,
   setCanPaste,
-  canPaste,
 }: UseCanvasActionsArgs) => {
-  const handleDelete = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.deleteSelected();
-      refreshHistoryState();
-    }
-  };
-
-  const handleDuplicate = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.duplicateSelected();
-      refreshHistoryState();
-    }
-  };
-
-  const handleBringToFront = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.bringToFront();
-      refreshHistoryState();
-    }
-  };
-
-  const handleSendToBack = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.sendToBack();
-      refreshHistoryState();
-    }
-  };
-
-  const handleSelectAll = () => {
-    canvasMethodsRef.value?.selectAll?.();
-    if (canvasMethodsRef.value?.getSelectionCount) {
-      setSelectionCount(canvasMethodsRef.value.getSelectionCount());
-    }
-    setSelectedShape(canvasMethodsRef.value?.getSelectedShape?.() || null);
-  };
-
-  const handleClearSelection = () => {
-    canvasMethodsRef.value?.clearSelection?.();
-    setSelectionCount(0);
-    setSelectedShape(null);
-  };
-
-  const handleRotateLeft = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.rotateSelectedBy(-90);
-      refreshHistoryState();
-    }
-  };
-
-  const handleRotateRight = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.rotateSelectedBy(90);
-      refreshHistoryState();
-    }
-  };
-
-  const handleFlipHorizontal = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.flipSelectedHorizontal();
-      refreshHistoryState();
-    }
-  };
-
-  const handleFlipVertical = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.flipSelectedVertical();
-      refreshHistoryState();
-    }
-  };
-
-  const handleUndo = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.undo();
-      refreshHistoryState();
-    }
-  };
-
-  const handleRedo = () => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.redo();
-      refreshHistoryState();
-    }
-  };
-
-  const handleCopy = () => {
-    if (!canvasMethodsRef.value?.copySelection) return;
-    canvasMethodsRef.value.copySelection();
-    const nextCanPaste = canvasMethodsRef.value.hasClipboard?.() ?? false;
-    setCanPaste(nextCanPaste);
-    if (canvasMethodsRef.value?.getSelectionCount) {
-      setSelectionCount(canvasMethodsRef.value.getSelectionCount());
-    }
-  };
-
-  const handlePaste = () => {
-    if (!canvasMethodsRef.value?.pasteClipboard) return;
-    canvasMethodsRef.value.pasteClipboard();
-    const nextCanPaste = canvasMethodsRef.value.hasClipboard?.() ?? canPaste.value;
-    setCanPaste(nextCanPaste);
-    refreshHistoryState();
-    if (canvasMethodsRef.value?.getSelectionCount) {
-      setSelectionCount(canvasMethodsRef.value.getSelectionCount());
-    }
-  };
-
-  const handleCut = () => {
-    if (!canvasMethodsRef.value?.copySelection || !canvasMethodsRef.value?.deleteSelected) return;
-    canvasMethodsRef.value.copySelection();
-    canvasMethodsRef.value.deleteSelected();
-    const nextCanPaste = canvasMethodsRef.value.hasClipboard?.() ?? false;
-    setCanPaste(nextCanPaste);
-    refreshHistoryState();
-    if (canvasMethodsRef.value?.getSelectionCount) {
-      setSelectionCount(canvasMethodsRef.value.getSelectionCount());
-    }
-  };
-
-  const handleMoveForward = () => {
-    canvasMethodsRef.value?.moveForward?.();
-    refreshHistoryState();
-    if (canvasMethodsRef.value?.getSelectionCount) {
-      setSelectionCount(canvasMethodsRef.value.getSelectionCount());
-    }
-  };
-
-  const handleMoveBackward = () => {
-    canvasMethodsRef.value?.moveBackward?.();
-    refreshHistoryState();
-    if (canvasMethodsRef.value?.getSelectionCount) {
-      setSelectionCount(canvasMethodsRef.value.getSelectionCount());
-    }
-  };
-
-  const handleUngroup = () => {
-    canvasMethodsRef.value?.ungroupSelected?.();
-    refreshHistoryState();
-    if (canvasMethodsRef.value?.getSelectionCount) {
-      setSelectionCount(canvasMethodsRef.value.getSelectionCount());
-    }
-  };
-
-  const handleCombineSelected = () => {
-    canvasMethodsRef.value?.combineSelected?.();
-    refreshHistoryState();
-  };
-
+  // 返回动态获取canvasMethods的操作函数
   return {
-    handleDelete,
-    handleDuplicate,
-    handleBringToFront,
-    handleSendToBack,
-    handleSelectAll,
-    handleClearSelection,
-    handleRotateLeft,
-    handleRotateRight,
-    handleFlipHorizontal,
-    handleFlipVertical,
-    handleUndo,
-    handleRedo,
-    handleCopy,
-    handlePaste,
-    handleCut,
-    handleMoveForward,
-    handleMoveBackward,
-    handleUngroup,
-    handleCombineSelected,
+    handleDelete: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleDelete();
+    },
+    handleDuplicate: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleDuplicate();
+    },
+    handleSelectAll: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleSelectAll();
+    },
+    handleClearSelection: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleClearSelection();
+    },
+    handleBringToFront: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleBringToFront();
+    },
+    handleSendToBack: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleSendToBack();
+    },
+    handleMoveForward: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleMoveForward();
+    },
+    handleMoveBackward: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleMoveBackward();
+    },
+    handleRotateLeft: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleRotateLeft();
+    },
+    handleRotateRight: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleRotateRight();
+    },
+    handleFlipHorizontal: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleFlipHorizontal();
+    },
+    handleFlipVertical: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleFlipVertical();
+    },
+    handleUndo: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleUndo();
+    },
+    handleRedo: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleRedo();
+    },
+    handleCopy: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleCopy();
+    },
+    handlePaste: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handlePaste();
+    },
+    handleCut: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleCut();
+    },
+    handleUngroup: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleUngroup();
+    },
+    handleCombineSelected: () => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createCanvasActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+        setSelectionCount,
+        setSelectedShape,
+        setCanPaste,
+      });
+      return actions.handleCombineSelected();
+    },
   };
 };

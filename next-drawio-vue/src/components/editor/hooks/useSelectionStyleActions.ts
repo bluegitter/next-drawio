@@ -1,5 +1,9 @@
+/**
+ * Vue 适配层 - 将核心样式操作逻辑适配为 Vue hooks
+ */
 import type { Ref } from 'vue';
 import type { CanvasComponentRef } from "../../canvas/canvas-types";
+import { createSelectionStyleActions, type CanvasComponentMethods } from '@drawio/core';
 
 type UseSelectionStyleActionsArgs = {
   canvasMethodsRef: Ref<CanvasComponentRef | null>;
@@ -7,59 +11,77 @@ type UseSelectionStyleActionsArgs = {
 };
 
 export const useSelectionStyleActions = ({ canvasMethodsRef, refreshHistoryState }: UseSelectionStyleActionsArgs) => {
-  const handleFillChange = (color: string) => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.changeSelectedFill(color);
-      refreshHistoryState();
-    }
-  };
-
-  const handleStrokeChange = (color: string) => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.changeSelectedStroke(color);
-      refreshHistoryState();
-    }
-  };
-
-  const handleStrokeWidthChange = (width: number) => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.changeSelectedStrokeWidth(width);
-      refreshHistoryState();
-    }
-  };
-
-  const handleRotationChange = (rotation: number) => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.rotateSelected(rotation);
-      refreshHistoryState();
-    }
-  };
-
-  const handleScaleChange = (scale: number) => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.scaleSelected(scale);
-      refreshHistoryState();
-    }
-  };
-
-  const handleOpacityChange = (opacity: number) => {
-    if (canvasMethodsRef.value) {
-      canvasMethodsRef.value.changeSelectedOpacity(opacity);
-      refreshHistoryState();
-    }
-  };
-
-  const handleArrowChange = (mode: 'none' | 'start' | 'end' | 'both') => {
-    canvasMethodsRef.value?.changeSelectedArrow?.(mode);
-  };
-
+  // 返回动态获取canvasMethods的操作函数
   return {
-    handleFillChange,
-    handleStrokeChange,
-    handleStrokeWidthChange,
-    handleRotationChange,
-    handleScaleChange,
-    handleOpacityChange,
-    handleArrowChange,
+    handleFillChange: (color: string) => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createSelectionStyleActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+      });
+      return actions.handleFillChange(color);
+    },
+    handleStrokeChange: (color: string) => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createSelectionStyleActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+      });
+      return actions.handleStrokeChange(color);
+    },
+    handleStrokeWidthChange: (width: number) => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createSelectionStyleActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+      });
+      return actions.handleStrokeWidthChange(width);
+    },
+    handleRotationChange: (rotation: number) => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createSelectionStyleActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+      });
+      return actions.handleRotationChange(rotation);
+    },
+    handleScaleChange: (scale: number) => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createSelectionStyleActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+      });
+      return actions.handleScaleChange(scale);
+    },
+    handleOpacityChange: (opacity: number) => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createSelectionStyleActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+      });
+      return actions.handleOpacityChange(opacity);
+    },
+    handleArrowChange: (mode: 'none' | 'start' | 'end' | 'both') => {
+      const methods = canvasMethodsRef.value as unknown as CanvasComponentMethods | null;
+      if (!methods) return;
+
+      const actions = createSelectionStyleActions({
+        canvasMethods: methods,
+        refreshHistoryState,
+      });
+      return actions.handleArrowChange(mode);
+    },
   };
 };

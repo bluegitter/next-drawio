@@ -41,6 +41,7 @@ import { useShapeEventBindings } from './canvas/hooks/useShapeEventBindings';
 import { useKeyboardShortcuts } from './canvas/hooks/useKeyboardShortcuts';
 import { useBoundsChange } from './canvas/hooks/useBoundsChange';
 import { useAutoResize } from './canvas/hooks/useAutoResize';
+import { useCanvasLifecycle } from './canvas/hooks/useCanvasLifecycle';
 import { getConnectorPoints, parsePoints, pointToPolylineDistance, projectPointToSegment } from '@drawio/core';
 import { decodeDataUri, tintDataUri, tintSvgText, toDataUri } from '@drawio/core';
 import { updateCloudPath, updateCylinderPath } from '@drawio/core';

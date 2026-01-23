@@ -9,3 +9,5 @@ export * from './utils/refs';
 export * from './types/index';
 // 避免类型冲突，使用命名空间导出状态管理模块
 export * from './state/index';
+// Editor模块
+export * from './editor/index';

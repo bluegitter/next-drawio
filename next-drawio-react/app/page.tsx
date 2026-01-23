@@ -218,7 +218,6 @@ export default function Home() {
     setSelectionCount,
     setSelectedShape,
     setCanPaste,
-    canPaste,
   });
 
   const clientToCanvasPoint = useCallback((clientX: number, clientY: number) => {
@@ -249,6 +248,7 @@ export default function Home() {
     setZoom,
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
+    zoomOptions: [25, 50, 75, 100, 150, 200, 400],
     zoomFactor: ZOOM_FACTOR,
     canvasMethodsRef,
     scrollContainerRef,

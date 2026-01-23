@@ -321,7 +321,6 @@ const {
   setSelectionCount: (value) => (selectionCount.value = value),
   setSelectedShape: (value) => (selectedShape.value = value),
   setCanPaste: (value) => (canPaste.value = value),
-  canPaste,
 });
 
 const clientToCanvasPoint = (clientX: number, clientY: number) => {
@@ -358,6 +357,7 @@ const {
   setZoom: (value) => (zoom.value = value),
   minZoom: MIN_ZOOM,
   maxZoom: MAX_ZOOM,
+  zoomOptions: [25, 50, 75, 100, 150, 200, 400],
   zoomFactor: ZOOM_FACTOR,
   canvasMethodsRef,
   scrollContainerRef: scrollContainerRefForBounds,
