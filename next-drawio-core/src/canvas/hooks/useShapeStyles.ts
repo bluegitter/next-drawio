@@ -1,0 +1,286 @@
+import type { SVGShape } from '../types';
+import type { MaybeRef, RefLike } from '../../utils/refs';
+import { getRefValue } from '../../utils/refs';
+
+type UseShapeStylesArgs = {
+  applyTransform: (shape: SVGShape) => void;
+  updateSelectedShape: (updater: (shape: SVGShape) => void) => void;
+  selectedIds: MaybeRef<Set<string>>;
+  selectedIdsRef: RefLike<Set<string>>;
+  shapes: MaybeRef<SVGShape[]>;
+  shapesRef: RefLike<SVGShape[]>;
+  setShapesState: (updater: (prev: SVGShape[]) => SVGShape[]) => void;
+  saveToHistory: (snapshotShapes?: SVGShape[], snapshotSelectedIds?: string[] | Set<string> | string | null) => void;
+  updateCylinderPath: (shape: SVGShape) => void;
+  updateCloudPath: (shape: SVGShape) => void;
+  decodeDataUri: (data: string) => string;
+  tintSvgText: (svgText: string, color: string) => string;
+  toDataUri: (svgText: string) => string;
+  tintDataUri: (dataUri: string, color: string) => string;
+  updateConnectionLine: (connLine: SVGShape, shapeId: string, shapeList?: SVGShape[]) => void;
+  refreshCornerHandles: (shape: SVGShape) => void;
+};
+
+export const useShapeStyles = ({
+  applyTransform,
+  updateSelectedShape,
+  selectedIds,
+  selectedIdsRef,
+  shapes,
+  shapesRef,
+  setShapesState,
+  saveToHistory,
+  updateCylinderPath,
+  updateCloudPath,
+  decodeDataUri,
+  tintSvgText,
+  toDataUri,
+  tintDataUri,
+  updateConnectionLine,
+  refreshCornerHandles,
+}: UseShapeStylesArgs) => {
+  const rotateSelected = (angle: number) => {
+    updateSelectedShape((shape) => {
+      shape.data.rotation = angle;
+      applyTransform(shape);
+      
+      // 旋转时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
+    });
+    setTimeout(() => {
+      const selected = getRefValue(selectedIdsRef) ?? new Set<string>();
+      const shapeList = getRefValue(shapesRef) ?? [];
+      selected.forEach((id) => {
+        const shape = shapeList.find((s) => s.id === id);
+        if (shape?.connections) {
+          shape.connections.forEach((connId) => {
+            const connLine = shapeList.find((s) => s.id === connId);
+            if (connLine) updateConnectionLine(connLine, shape.id);
+          });
+        }
+      });
+    }, 0);
+  };
+
+  const rotateSelectedBy = (delta: number) => {
+    updateSelectedShape((shape) => {
+      const current = shape.data.rotation || 0;
+      shape.data.rotation = current + delta;
+      applyTransform(shape);
+      
+      // 旋转时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
+    });
+    setTimeout(() => {
+      const selected = getRefValue(selectedIdsRef) ?? new Set<string>();
+      const shapeList = getRefValue(shapesRef) ?? [];
+      selected.forEach((id) => {
+        const shape = shapeList.find((s) => s.id === id);
+        if (shape?.connections) {
+          shape.connections.forEach((connId) => {
+            const connLine = shapeList.find((s) => s.id === connId);
+            if (connLine) updateConnectionLine(connLine, shape.id);
+          });
+        }
+      });
+    }, 0);
+  };
+
+  const flipSelectedHorizontal = () => {
+    updateSelectedShape((shape) => {
+      shape.data.flipX = !shape.data.flipX;
+      applyTransform(shape);
+    });
+  };
+
+  const flipSelectedVertical = () => {
+    updateSelectedShape((shape) => {
+      shape.data.flipY = !shape.data.flipY;
+      applyTransform(shape);
+    });
+  };
+
+  const scaleSelected = (scale: number) => {
+    const safeScale = Math.max(0.1, scale);
+    updateSelectedShape((shape) => {
+      shape.data.scale = safeScale;
+      applyTransform(shape);
+      
+      // 缩放时刷新corner handles位置
+      if (shape.type === 'roundedRect') {
+        refreshCornerHandles(shape);
+      }
+    });
+    setTimeout(() => {
+      const selected = getRefValue(selectedIdsRef) ?? new Set<string>();
+      const shapeList = getRefValue(shapesRef) ?? [];
+      selected.forEach((id) => {
+        const shape = shapeList.find((s) => s.id === id);
+        if (shape?.connections) {
+          shape.connections.forEach((connId) => {
+            const connLine = shapeList.find((s) => s.id === connId);
+            if (connLine) updateConnectionLine(connLine, shape.id);
+          });
+        }
+      });
+    }, 0);
+  };
+
+  const updateLineMarkers = (shape: SVGShape) => {
+    if (shape.type !== 'line') return;
+    const mode = shape.data.arrowMode || 'none';
+    const el = shape.element as SVGLineElement;
+    const start = mode === 'start' || mode === 'both' ? 'url(#arrow-start-marker)' : '';
+    const end = mode === 'end' || mode === 'both' ? 'url(#arrow-end-marker)' : '';
+    if (start) el.setAttribute('marker-start', start);
+    else el.removeAttribute('marker-start');
+    if (end) el.setAttribute('marker-end', end);
+    else el.removeAttribute('marker-end');
+    shape.data.arrowMode = mode;
+  };
+
+  const changeSelectedFill = (color: string) => {
+    const selected = getRefValue(selectedIds) ?? new Set<string>();
+    const selectedRef = getRefValue(selectedIdsRef) ?? new Set<string>();
+    const targetIds = selectedRef.size ? selectedRef : selected;
+    if (targetIds.size === 0) return;
+    const currentShapes = getRefValue(shapesRef) ?? [];
+    const updatedShapes = currentShapes.map((shape) => {
+      if (!targetIds.has(shape.id)) return shape;
+      const nextShape = { ...shape, data: { ...shape.data } };
+      nextShape.data.fill = color;
+      if (nextShape.type === 'line' || nextShape.type === 'polyline' || nextShape.type === 'connector') {
+        nextShape.element.setAttribute('fill', 'none');
+      } else if (nextShape.type === 'image') {
+        const originalSvg = nextShape.data.originalSvgText || decodeDataUri(nextShape.data.originalHref || nextShape.data.href || '');
+        if (originalSvg) {
+          const tintedText = tintSvgText(originalSvg, color);
+          const tintedUri = toDataUri(tintedText);
+          if (tintedUri) {
+            nextShape.data.href = tintedUri;
+            (nextShape.element as SVGImageElement).setAttribute('href', tintedUri);
+            (nextShape.element as SVGImageElement).setAttributeNS('http://www.w3.org/1999/xlink', 'href', tintedUri);
+          }
+        } else {
+          const href = nextShape.data.originalHref || nextShape.data.href || '';
+          const tinted = tintDataUri(href, color);
+          nextShape.data.href = tinted;
+          (nextShape.element as SVGImageElement).setAttribute('href', tinted);
+          (nextShape.element as SVGImageElement).setAttributeNS('http://www.w3.org/1999/xlink', 'href', tinted);
+        }
+      } else if (nextShape.type === 'cylinder') {
+        nextShape.data.fill = color;
+        updateCylinderPath(nextShape);
+      } else if (nextShape.type === 'cloud') {
+        nextShape.data.fill = color;
+        updateCloudPath(nextShape);
+      } else {
+        nextShape.element.setAttribute('fill', color);
+      }
+      return nextShape;
+    });
+    setShapesState(() => updatedShapes);
+    saveToHistory(updatedShapes, targetIds);
+  };
+
+  const changeSelectedStroke = (color: string) => {
+    const selected = getRefValue(selectedIds) ?? new Set<string>();
+    const selectedRef = getRefValue(selectedIdsRef) ?? new Set<string>();
+    const targetIds = selectedRef.size ? selectedRef : selected;
+    if (targetIds.size === 0) return;
+    const shapeList = getRefValue(shapes) ?? [];
+    const updatedShapes = shapeList.map((shape) => {
+      if (!targetIds.has(shape.id)) return shape;
+      const nextShape = { ...shape, data: { ...shape.data, stroke: color } };
+      if (nextShape.type === 'cylinder') {
+        updateCylinderPath(nextShape);
+      } else if (nextShape.type === 'cloud') {
+        updateCloudPath(nextShape);
+      } else {
+        nextShape.element.setAttribute('stroke', color);
+      }
+      return nextShape;
+    });
+    setShapesState(() => updatedShapes);
+    saveToHistory(updatedShapes, targetIds);
+  };
+
+  const changeSelectedStrokeWidth = (width: number) => {
+    const selected = getRefValue(selectedIds) ?? new Set<string>();
+    const selectedRef = getRefValue(selectedIdsRef) ?? new Set<string>();
+    const targetIds = selectedRef.size ? selectedRef : selected;
+    if (targetIds.size === 0) return;
+    const shapeList = getRefValue(shapes) ?? [];
+    const updatedShapes = shapeList.map((shape) => {
+      if (!targetIds.has(shape.id)) return shape;
+      const nextShape = { ...shape, data: { ...shape.data, strokeWidth: width } };
+      if (nextShape.type === 'cylinder') {
+        updateCylinderPath(nextShape);
+      } else if (nextShape.type === 'cloud') {
+        updateCloudPath(nextShape);
+      } else {
+        nextShape.element.setAttribute('stroke-width', String(width));
+      }
+      return nextShape;
+    });
+    setShapesState(() => updatedShapes);
+    saveToHistory(updatedShapes, targetIds);
+  };
+
+  const changeSelectedArrow = (mode: 'none' | 'start' | 'end' | 'both') => {
+    const selected = getRefValue(selectedIds) ?? new Set<string>();
+    const selectedRef = getRefValue(selectedIdsRef) ?? new Set<string>();
+    const targetIds = selectedRef.size ? selectedRef : selected;
+    if (targetIds.size === 0) return;
+    const shapeList = getRefValue(shapes) ?? [];
+    const updatedShapes = shapeList.map((shape) => {
+      if (!targetIds.has(shape.id)) return shape;
+      if (shape.type !== 'line') return shape;
+      const nextShape = { ...shape, data: { ...shape.data, arrowMode: mode } };
+      updateLineMarkers(nextShape);
+      return nextShape;
+    });
+    setShapesState(() => updatedShapes);
+    saveToHistory(updatedShapes, targetIds);
+  };
+
+  const changeSelectedOpacity = (opacity: number) => {
+    const selected = getRefValue(selectedIds) ?? new Set<string>();
+    const selectedRef = getRefValue(selectedIdsRef) ?? new Set<string>();
+    const targetIds = selectedRef.size ? selectedRef : selected;
+    if (targetIds.size === 0) return;
+    const safeOpacity = Math.min(1, Math.max(0, opacity));
+    const shapeList = getRefValue(shapes) ?? [];
+    const updatedShapes = shapeList.map((shape) => {
+      if (!targetIds.has(shape.id)) return shape;
+      const nextShape = { ...shape, data: { ...shape.data, opacity: safeOpacity } };
+      if (nextShape.type === 'cylinder') {
+        updateCylinderPath(nextShape);
+      } else if (nextShape.type === 'cloud') {
+        updateCloudPath(nextShape);
+      } else {
+        nextShape.element.setAttribute('opacity', String(safeOpacity));
+      }
+      return nextShape;
+    });
+    setShapesState(() => updatedShapes);
+    saveToHistory(updatedShapes, targetIds);
+  };
+
+  return {
+    rotateSelected,
+    rotateSelectedBy,
+    flipSelectedHorizontal,
+    flipSelectedVertical,
+    scaleSelected,
+    changeSelectedFill,
+    changeSelectedStroke,
+    changeSelectedStrokeWidth,
+    changeSelectedArrow,
+    changeSelectedOpacity,
+  };
+};

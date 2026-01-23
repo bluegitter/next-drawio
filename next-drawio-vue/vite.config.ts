@@ -32,7 +32,7 @@ export default defineConfig({
     tailwindcss()
   ],
   optimizeDeps: {
-    include: ['@drawio/core'],
+    exclude: ['@drawio/core'],
   },
   resolve: {
     alias: {
