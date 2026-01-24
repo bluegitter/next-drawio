@@ -13,7 +13,8 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@drawio/core": ["../next-drawio-core/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.vue"]
